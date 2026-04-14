@@ -503,8 +503,9 @@ export default function App() {
       {modal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}}>
           <div style={{background:'white',borderRadius:'16px',padding:'24px',width:'340px',maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{fontSize:'15px',fontWeight:'700',color:'#2D1B3D',marginBottom:'18px'}}>
-              {modal==='entry'?'📝 내역 추가':modal==='saving'?'💰 적립 추가':modal==='expense'?'💸 지출 추가':'💵 수입 추가'}
+            <div style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'15px',fontWeight:'700',color:'#2D1B3D',marginBottom:'18px',lineHeight:'1'}}>
+              <span style={{fontSize:'16px'}}>{modal==='entry'?'📝':modal==='saving'?'💰':modal==='expense'?'💸':'💵'}</span>
+              <span>{modal==='entry'?'내역 추가':modal==='saving'?'적립 추가':modal==='expense'?'지출 추가':'수입 추가'}</span>
             </div>
             {modal==='entry'&&(<>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
