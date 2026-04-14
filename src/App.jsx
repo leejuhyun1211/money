@@ -128,6 +128,25 @@ export default function App() {
     setLoading(false);
   }
 
+  async function deleteItem(id, type) {
+    await supabase.from('budget_items').delete().eq('id', id);
+    const key = type === 'expense' ? 'expenses' : 'income';
+    setBudgets(prev => ({
+      ...prev,
+      [month]: { ...prev[month], [key]: prev[month][key].filter(x => x.id !== id) }
+    }));
+  }
+
+  async function deleteTx(tx) {
+    await supabase.from('transactions').delete().eq('id', tx.id);
+    const goal = goals.find(g => g.name === tx.goal);
+    if (goal) {
+      await supabase.from('goals').update({ saved: Math.max(0, goal.saved - tx.amount) }).eq('id', goal.id);
+      setGoals(prev => prev.map(g => g.name === tx.goal ? { ...g, saved: Math.max(0, g.saved - tx.amount) } : g));
+    }
+    setTxs(prev => prev.filter(t => t.id !== tx.id));
+  }
+
   async function addItem() {
     const amt = Number(form.amount) || 0;
     if (!amt) return setModal(null);
@@ -281,8 +300,8 @@ export default function App() {
               <div style={{ fontSize:'12px', fontWeight:'600', color:'#6B5B7B', marginBottom:'10px' }}>💸 지출 예산 현황</div>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead><tr>
-                  {['항목','예산','실제','달성률'].map((h,i) => (
-                    <th key={h} style={{ ...th, textAlign:i>0?'right':'left' }}>{h}</th>
+                  {['항목','예산','실제','달성률',''].map((h,i) => (
+                    <th key={i} style={{ ...th, textAlign:i>0&&i<4?'right':'left' }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
@@ -298,6 +317,9 @@ export default function App() {
                         <td style={{ ...td, textAlign:'right', color:over?'#EF4444':'#2D1B3D', fontWeight:over?'700':'400' }}>{f(e.actual)}</td>
                         <td style={{ ...td, textAlign:'right', minWidth:'80px' }}>
                           <ProgressBar val={e.actual} max={e.budget} color={over?'#EF4444':C[i%C.length]} />
+                        </td>
+                        <td style={{ ...td, textAlign:'center', width:'30px' }}>
+                          <button onClick={() => deleteItem(e.id, 'expense')} style={{ background:'none', border:'none', color:'#D1C4E9', cursor:'pointer', fontSize:'14px', padding:'0' }}>✕</button>
                         </td>
                       </tr>
                     );
@@ -315,8 +337,8 @@ export default function App() {
               <div style={{ fontSize:'12px', fontWeight:'600', color:'#6B5B7B', marginBottom:'10px' }}>💵 수입 현황</div>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead><tr>
-                  {['항목','목표','실제','달성률'].map((h,i) => (
-                    <th key={h} style={{ ...th, textAlign:i>0?'right':'left' }}>{h}</th>
+                  {['항목','목표','실제','달성률',''].map((h,i) => (
+                    <th key={i} style={{ ...th, textAlign:i>0&&i<4?'right':'left' }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
@@ -327,6 +349,9 @@ export default function App() {
                       <td style={{ ...td, textAlign:'right', fontWeight:'600', color:'#7C3AED' }}>{f(inc.actual)}</td>
                       <td style={{ ...td, textAlign:'right', minWidth:'80px' }}>
                         <ProgressBar val={inc.actual} max={inc.budget} color="#7C3AED" />
+                      </td>
+                      <td style={{ ...td, textAlign:'center', width:'30px' }}>
+                        <button onClick={() => deleteItem(inc.id, 'income')} style={{ background:'none', border:'none', color:'#D1C4E9', cursor:'pointer', fontSize:'14px', padding:'0' }}>✕</button>
                       </td>
                     </tr>
                   ))}
@@ -374,6 +399,7 @@ export default function App() {
                   <th style={th}>날짜</th>
                   <th style={th}>항목</th>
                   <th style={{ ...th, textAlign:'right' }}>금액</th>
+                  <th style={th}></th>
                 </tr></thead>
                 <tbody>
                   {txs.slice(0,15).map(tx => (
@@ -381,6 +407,9 @@ export default function App() {
                       <td style={{ ...td, color:'#9B8FA0', fontSize:'11px' }}>{tx.date}</td>
                       <td style={td}>{tx.goal}</td>
                       <td style={{ ...td, textAlign:'right', color:'#22C55E', fontWeight:'600' }}>{f(tx.amount)}</td>
+                      <td style={{ ...td, textAlign:'center', width:'30px' }}>
+                        <button onClick={() => deleteTx(tx)} style={{ background:'none', border:'none', color:'#FCA5A5', cursor:'pointer', fontSize:'14px', padding:'0' }}>✕</button>
+                      </td>
                     </tr>
                   ))}
                   {txs.length === 0 && (
