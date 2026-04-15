@@ -242,8 +242,23 @@ function MainApp({ user }) {
 
   // ── CRUD ────────────────────────────────────────────
   async function bulkDeleteEntries(ids) {
+    const toDelete = entries.filter(e=>ids.has(e.id));
     await supabase.from('entries').delete().in('id',[...ids]);
     setEntries(prev=>prev.filter(e=>!ids.has(e.id)));
+
+    // 예산 실제 금액 동기화
+    for (const e of toDelete) {
+      const entryMonth = e.date?.slice(0,7);
+      if (!entryMonth) continue;
+      const key = e.type==='expense'?'expenses':'income';
+      setBudgets(prev=>{
+        const d = prev[entryMonth];
+        if (!d) return prev;
+        return {...prev,[entryMonth]:{...d,[key]:d[key].map(x=>x.cat===e.category?{...x,actual:Math.max(0,x.actual-e.amount)}:x)}};
+      });
+      const { data: items } = await supabase.from('budget_items').select('id,actual').eq('user_id',uid).eq('month',entryMonth).eq('type',e.type).eq('cat',e.category).single();
+      if (items) await supabase.from('budget_items').update({actual:Math.max(0,items.actual-e.amount)}).eq('id',items.id);
+    }
     entSel.clear(); fixSel.clear();
   }
   async function bulkDeleteBudget(ids, type) {
@@ -268,9 +283,23 @@ function MainApp({ user }) {
   async function addEntry() {
     const amt = Number(form.amount)||0;
     if (!amt||!form.category||!form.date) return;
+    const entryMonth = form.date.slice(0,7);
     const row = { user_id:uid, date:form.date, type:form.type||'expense', category:form.category, sub_category:form.sub_category||'', amount:amt, memo:form.memo||'', payment_method:form.payment_method||'현금', is_fixed:form.is_fixed||false };
     const { data } = await supabase.from('entries').insert(row).select().single();
     if (data) setEntries(prev=>[data,...prev].sort((a,b)=>b.date.localeCompare(a.date)));
+
+    // 예산 실제 금액 동기화
+    const type = form.type||'expense';
+    const key  = type==='expense'?'expenses':'income';
+    const d    = budgets[entryMonth] || { income:[], expenses:[] };
+    const existing = d[key].find(x=>x.cat===form.category);
+    if (existing) {
+      await supabase.from('budget_items').update({actual:existing.actual+amt}).eq('id',existing.id);
+      setBudgets(prev=>({...prev,[entryMonth]:{...d,[key]:d[key].map(x=>x.cat===form.category?{...x,actual:x.actual+amt}:x)}}));
+    } else {
+      const { data: item } = await supabase.from('budget_items').insert({user_id:uid,month:entryMonth,type,cat:form.category,budget:0,actual:amt}).select().single();
+      if (item) setBudgets(prev=>({...prev,[entryMonth]:{...(prev[entryMonth]||{income:[],expenses:[]}), [key]:[...(prev[entryMonth]?.[key]||[]),{id:item.id,cat:item.cat,budget:0,actual:amt}]}}));
+    }
     setModal(null); setForm({});
   }
 
