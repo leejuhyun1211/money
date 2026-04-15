@@ -316,6 +316,11 @@ function MainApp({ user }) {
       const { data: item } = await supabase.from('budget_items').insert({user_id:uid,month,type,cat:form.cat||'기타',budget:0,actual:amt}).select().single();
       if (item) setBudgets(prev=>({...prev,[month]:{...d,[key]:[...d[key],{id:item.id,cat:item.cat,budget:0,actual:amt}]}}));
     }
+    // entries에도 동기화
+    const today = new Date().toISOString().slice(0,10);
+    const entryDate = month+today.slice(7);
+    const { data: entry } = await supabase.from('entries').insert({user_id:uid,date:entryDate,type,category:form.cat||'기타',sub_category:'',amount:amt,memo:form.memo||'',payment_method:form.payment_method||'현금',is_fixed:false}).select().single();
+    if (entry) setEntries(prev=>[entry,...prev].sort((a,b)=>b.date.localeCompare(a.date)));
     setModal(null); setForm({});
   }
 
@@ -703,7 +708,9 @@ function MainApp({ user }) {
 
             {(modal==='expense'||modal==='income')&&(<>
               <div style={{marginBottom:'12px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>카테고리</div><input value={form.cat||''} onChange={e=>setForm({...form,cat:e.target.value})} placeholder={modal==='expense'?'식비, 교통비 ...':'월급, 상여금 ...'} style={inp}/></div>
-              <div style={{marginBottom:'18px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>금액 (원)</div><input type="number" value={form.amount||''} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0" style={inp}/></div>
+              <div style={{marginBottom:'12px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>금액 (원)</div><input type="number" value={form.amount||''} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0" style={inp}/></div>
+              <div style={{marginBottom:'12px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>결제수단</div><select value={form.payment_method||'현금'} onChange={e=>setForm({...form,payment_method:e.target.value})} style={inp}>{PAYMENT_METHODS.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+              <div style={{marginBottom:'18px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>메모</div><input value={form.memo||''} onChange={e=>setForm({...form,memo:e.target.value})} placeholder="메모 입력" style={inp}/></div>
             </>)}
 
             {(modal==='addGoal'||modal==='editGoal')&&(<>
