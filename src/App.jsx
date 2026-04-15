@@ -160,8 +160,7 @@ export default function App() {
         setBudgets(map);
       }
     }
-    if (goalsData && goalsData.length > 0) setGoals(goalsData);
-    else { const { data: s } = await supabase.from('goals').insert(SEED_GOALS).select(); if (s) setGoals(s); }
+    if (goalsData) setGoals(goalsData);
     if (txData) setTxs(txData.map(t => ({ id:t.id, date:t.date, goal:t.goal_name, amount:t.amount })));
     if (entryData && entryData.length > 0) setEntries(entryData);
     else { const { data: s } = await supabase.from('entries').insert(SEED_ENTRIES).select(); if (s) setEntries(s.sort((a,b)=>b.date.localeCompare(a.date))); }
@@ -217,6 +216,29 @@ export default function App() {
     }
     setModal(null); setForm({});
   }
+  async function addGoal() {
+    const { name, target, monthly, color } = form;
+    if (!name || !target) return;
+    const row = { name, target:Number(target), saved:0, monthly:Number(monthly)||0, color:color||'#7C3AED' };
+    const { data } = await supabase.from('goals').insert(row).select().single();
+    if (data) setGoals(prev => [...prev, data]);
+    setModal(null); setForm({});
+  }
+
+  async function editGoal() {
+    const { id, name, target, monthly, color, saved } = form;
+    if (!name || !target) return;
+    const updates = { name, target:Number(target), monthly:Number(monthly)||0, color:color||'#7C3AED', saved:Number(saved)||0 };
+    await supabase.from('goals').update(updates).eq('id', id);
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+    setModal(null); setForm({});
+  }
+
+  async function deleteGoals(ids) {
+    await supabase.from('goals').delete().in('id', [...ids]);
+    setGoals(prev => prev.filter(g => !ids.has(g.id)));
+  }
+
   async function addGoalTx() {
     const amt = Number(form.amount) || 0;
     if (!amt) return setModal(null);
@@ -431,7 +453,7 @@ export default function App() {
           <div style={{ display:'grid', gridTemplateColumns:'340px 1fr', gap:'12px' }}>
             <div style={card}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
-                <div style={{fontSize:'12px',fontWeight:'600',color:'#6B5B7B'}}>📋 적립 내역</div>
+                <div style={{fontSize:'12px',fontWeight:'600',color:'#6B5B7B'}}>적립 내역</div>
                 <button onClick={()=>{setModal('saving');setForm({goal:goals[0]?.name,amount:'',date:new Date().toISOString().slice(0,10)});}} style={{background:'#EF4444',color:'white',border:'none',borderRadius:'6px',padding:'5px 10px',fontSize:'11px',fontWeight:'600',cursor:'pointer'}}>+ 적립 추가</button>
               </div>
               <BulkBar count={txSel.sel.size} onDelete={()=>bulkDeleteTxs(txSel.sel)} onClear={txSel.clear}/>
@@ -453,22 +475,40 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',alignContent:'start'}}>
-              {goals.map(g=>{
-                const p=pct(g.saved,g.target), remain=g.target-g.saved, months=g.monthly>0?Math.ceil(remain/g.monthly):0;
-                const eta=new Date(); eta.setMonth(eta.getMonth()+months);
-                const etaStr=months>0?`${eta.getFullYear()}-${String(eta.getMonth()+1).padStart(2,'0')}`:'달성완료';
-                return <div key={g.id} style={{...card,borderTop:`3px solid ${g.color}`}}>
-                  <div style={{fontSize:'13px',fontWeight:'700',color:'#2D1B3D',marginBottom:'10px'}}>{g.name}</div>
-                  <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                    <Donut p={p} color={g.color} size={88}/>
-                    <div style={{flex:1}}>
-                      {[['목표',g.target],['확보',g.saved],['잔여',remain]].map(([l,v])=><div key={l} style={{display:'flex',justifyContent:'space-between',fontSize:'11px',marginBottom:'3px'}}><span style={{color:'#9B8FA0'}}>{l}</span><span style={{fontWeight:'600',color:'#2D1B3D'}}>{f(v)}</span></div>)}
-                      <div style={{display:'flex',justifyContent:'space-between',fontSize:'11px',marginTop:'5px',paddingTop:'5px',borderTop:'1px solid #F5F2FA'}}><span style={{color:'#9B8FA0'}}>예상 달성</span><span style={{fontWeight:'700',color:g.color}}>{etaStr}</span></div>
+            <div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}}>
+                <span style={{fontSize:'12px',fontWeight:'600',color:'#6B5B7B'}}>목표 목록 ({goals.length}개)</span>
+                <button onClick={()=>{setModal('addGoal');setForm({name:'',target:'',monthly:'',color:'#7C3AED'});}} style={{background:'#7C3AED',color:'white',border:'none',borderRadius:'8px',padding:'6px 14px',fontSize:'12px',fontWeight:'600',cursor:'pointer'}}>+ 목표 추가</button>
+              </div>
+              {goals.length===0 && (
+                <div style={{...card,textAlign:'center',padding:'40px',color:'#9B8FA0'}}>목표를 추가해봐요!</div>
+              )}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',alignContent:'start'}}>
+                {goals.map(g=>{
+                  const p=pct(g.saved,g.target), remain=g.target-g.saved, months=g.monthly>0?Math.ceil(remain/g.monthly):0;
+                  const eta=new Date(); eta.setMonth(eta.getMonth()+months);
+                  const etaStr=months>0?`${eta.getFullYear()}-${String(eta.getMonth()+1).padStart(2,'0')}`:'달성완료';
+                  return <div key={g.id} style={{...card,borderTop:`3px solid ${g.color}`,position:'relative'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+                      <div style={{fontSize:'13px',fontWeight:'700',color:'#2D1B3D'}}>{g.name}</div>
+                      <div style={{display:'flex',gap:'4px'}}>
+                        <button onClick={()=>{setModal('editGoal');setForm({id:g.id,name:g.name,target:g.target,monthly:g.monthly,color:g.color,saved:g.saved});}} style={{background:'#F5F2FA',border:'none',borderRadius:'6px',padding:'3px 8px',fontSize:'11px',color:'#7C3AED',cursor:'pointer',fontWeight:'600'}}>수정</button>
+                        <button onClick={()=>deleteGoals(new Set([g.id]))} style={{background:'#FFF5F5',border:'none',borderRadius:'6px',padding:'3px 8px',fontSize:'11px',color:'#EF4444',cursor:'pointer',fontWeight:'600'}}>삭제</button>
+                      </div>
                     </div>
-                  </div>
-                </div>;
-              })}
+                    <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                      <Donut p={p} color={g.color} size={88}/>
+                      <div style={{flex:1}}>
+                        {[['목표',g.target],['확보',g.saved],['잔여',remain]].map(([l,v])=><div key={l} style={{display:'flex',justifyContent:'space-between',fontSize:'11px',marginBottom:'3px'}}><span style={{color:'#9B8FA0'}}>{l}</span><span style={{fontWeight:'600',color:'#2D1B3D'}}>{f(v)}</span></div>)}
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:'11px',marginTop:'5px',paddingTop:'5px',borderTop:'1px solid #F5F2FA'}}>
+                          <span style={{color:'#9B8FA0'}}>월 적립</span><span style={{fontWeight:'600',color:'#9B8FA0'}}>{f(g.monthly)}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:'11px',marginTop:'3px'}}><span style={{color:'#9B8FA0'}}>예상 달성</span><span style={{fontWeight:'700',color:g.color}}>{etaStr}</span></div>
+                      </div>
+                    </div>
+                  </div>;
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -504,7 +544,7 @@ export default function App() {
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}}>
           <div style={{background:'white',borderRadius:'16px',padding:'24px',width:'340px',maxHeight:'90vh',overflowY:'auto'}}>
             <div style={{fontSize:'15px',fontWeight:'700',color:'#2D1B3D',marginBottom:'18px'}}>
-              {modal==='entry'?'내역 추가':modal==='saving'?'적립 추가':modal==='expense'?'지출 추가':'수입 추가'}
+              {modal==='entry'?'내역 추가':modal==='saving'?'적립 추가':modal==='expense'?'지출 추가':modal==='addGoal'?'목표 추가':modal==='editGoal'?'목표 수정':'수입 추가'}
             </div>
             {modal==='entry'&&(<>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
@@ -517,7 +557,19 @@ export default function App() {
               <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'4px'}}>메모</div><input value={form.memo||''} onChange={e=>setForm({...form,memo:e.target.value})} placeholder="메모 입력" style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'7px 10px',fontSize:'12px'}}/></div>
               <div style={{marginBottom:'16px',display:'flex',alignItems:'center',gap:'8px'}}><input type="checkbox" id="is_fixed" checked={form.is_fixed||false} onChange={e=>setForm({...form,is_fixed:e.target.checked})} style={{cursor:'pointer'}}/><label htmlFor="is_fixed" style={{fontSize:'12px',color:'#6B5B7B',cursor:'pointer'}}>🔁 고정항목 (매월 반복)</label></div>
             </>)}
-            {modal==='saving'&&(<>
+            {(modal==='addGoal'||modal==='editGoal')&&(<>
+              <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'4px'}}>목표 이름</div><input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})} placeholder="비상금, 여행 자금 ..." style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'7px 10px',fontSize:'12px'}}/></div>
+              <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'4px'}}>목표 금액 (원)</div><input type="number" value={form.target||''} onChange={e=>setForm({...form,target:e.target.value})} placeholder="0" style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'7px 10px',fontSize:'12px'}}/></div>
+              <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'4px'}}>월 적립 금액 (원)</div><input type="number" value={form.monthly||''} onChange={e=>setForm({...form,monthly:e.target.value})} placeholder="0" style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'7px 10px',fontSize:'12px'}}/></div>
+              {modal==='editGoal'&&<div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'4px'}}>현재 확보 금액 (원)</div><input type="number" value={form.saved||''} onChange={e=>setForm({...form,saved:e.target.value})} placeholder="0" style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'7px 10px',fontSize:'12px'}}/></div>}
+              <div style={{marginBottom:'16px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'4px'}}>색상</div>
+                <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+                  {['#7C3AED','#EC4899','#EF4444','#F97316','#EAB308','#22C55E','#06B6D4','#3B82F6'].map(c=>(
+                    <div key={c} onClick={()=>setForm({...form,color:c})} style={{width:'24px',height:'24px',borderRadius:'50%',background:c,cursor:'pointer',border:form.color===c?'3px solid #2D1B3D':'3px solid transparent'}}/>
+                  ))}
+                </div>
+              </div>
+            </>)}
               <div style={{marginBottom:'12px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>목표 항목</div><select value={form.goal||''} onChange={e=>setForm({...form,goal:e.target.value})} style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'8px 10px',fontSize:'13px'}}>{goals.map(g=><option key={g.id} value={g.name}>{g.name}</option>)}</select></div>
               <div style={{marginBottom:'12px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>날짜</div><input type="date" value={form.date||''} onChange={e=>setForm({...form,date:e.target.value})} style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'8px 10px',fontSize:'13px'}}/></div>
               <div style={{marginBottom:'18px'}}><div style={{fontSize:'12px',color:'#6B5B7B',marginBottom:'5px'}}>금액 (원)</div><input type="number" value={form.amount||''} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0" style={{width:'100%',border:'1px solid #D9D0E8',borderRadius:'8px',padding:'8px 10px',fontSize:'13px'}}/></div>
@@ -528,7 +580,7 @@ export default function App() {
             </>)}
             <div style={{display:'flex',gap:'8px'}}>
               <button onClick={()=>{setModal(null);setForm({});}} style={{flex:1,background:'#F5F2FA',color:'#6B5B7B',border:'none',borderRadius:'8px',padding:'10px',fontSize:'13px',fontWeight:'600',cursor:'pointer'}}>취소</button>
-              <button onClick={modal==='entry'?addEntry:modal==='saving'?addGoalTx:addBudgetItem} style={{flex:1,background:modal==='saving'?'#EF4444':modal==='expense'?'#EC4899':'#7C3AED',color:'white',border:'none',borderRadius:'8px',padding:'10px',fontSize:'13px',fontWeight:'600',cursor:'pointer'}}>추가</button>
+              <button onClick={modal==='entry'?addEntry:modal==='saving'?addGoalTx:modal==='addGoal'?addGoal:modal==='editGoal'?editGoal:addBudgetItem} style={{flex:1,background:modal==='saving'||modal==='addGoal'||modal==='editGoal'?'#7C3AED':modal==='expense'?'#EC4899':'#7C3AED',color:'white',border:'none',borderRadius:'8px',padding:'10px',fontSize:'13px',fontWeight:'600',cursor:'pointer'}}>{modal==='editGoal'?'수정':'추가'}</button>
             </div>
           </div>
         </div>
