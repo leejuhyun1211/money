@@ -483,6 +483,9 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 고정 지출 -->
 <div class="page" id="page-fixed">
+  <!-- 3일 내 예정 알림 -->
+  <div id="fx-alert" style="display:none;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px 16px;margin-bottom:1rem;font-size:13px;color:#c084fc"></div>
+
   <div class="cards c3">
     <div class="card c-pu"><div class="label">월 고정 지출</div><div class="amount" id="fx-tot">₩0</div></div>
     <div class="card c-gr"><div class="label">연간 고정 지출</div><div class="amount" id="fx-yr">₩0</div></div>
@@ -501,14 +504,16 @@ tr:hover td{background:var(--sf2);}
     </div>
   </div>
   <div class="box">
-    <div class="box-hd"><h2>고정 지출 목록</h2></div>
-    <div class="box-bd"><div class="fl" id="fx-list"></div></div>
+    <div class="box-hd"><h2>이번달 결제 현황</h2><span id="fx-month-label" style="font-size:12px;color:var(--mu)"></span></div>
+    <table>
+      <thead><tr><th>이름</th><th>카테고리</th><th>결제일</th><th style="text-align:right">금액</th><th>이번달 상태</th><th></th></tr></thead>
+      <tbody id="fx-table"></tbody>
+    </table>
+    <div class="empty" id="fx-empty">항목이 없습니다</div>
   </div>
   <div class="box">
-    <div class="box-hd"><h2>결제일 순</h2></div>
-    <table><thead><tr><th>이름</th><th>카테고리</th><th>결제일</th><th style="text-align:right">금액</th><th></th></tr></thead>
-    <tbody id="fx-table"></tbody></table>
-    <div class="empty" id="fx-empty">항목이 없습니다</div>
+    <div class="box-hd"><h2>고정 지출 목록</h2></div>
+    <div class="box-bd"><div class="fl" id="fx-list"></div></div>
   </div>
 </div>
 
@@ -685,6 +690,8 @@ let assets    = JSON.parse(localStorage.getItem('gb_assets')    || '[]');
 let fixeds    = JSON.parse(localStorage.getItem('gb_fixeds')    || '[]');
 let accounts  = JSON.parse(localStorage.getItem('gb_accounts')  || '[]');
 let transfers = JSON.parse(localStorage.getItem('gb_transfers') || '[]');
+// 고정지출 월별 상태: {ym_fxId: 'pending'|'done'|'skip'}
+let fxStatus  = JSON.parse(localStorage.getItem('gb_fx_status') || '{}');
 let txCats    = JSON.parse(localStorage.getItem('gb_txCats')    || '["식비","교통","쇼핑","의료","구독","저축","급여","기타"]');
 let assetCats = JSON.parse(localStorage.getItem('gb_assetCats') || '["예금/적금","현금","투자/주식","부동산","대출","카드부채","기타"]');
 let fixedCats = JSON.parse(localStorage.getItem('gb_fixedCats') || '["구독","보험","통신","주거","교육","기타"]');
@@ -840,6 +847,7 @@ function save(){
   localStorage.setItem('gb_fixeds',    JSON.stringify(fixeds));
   localStorage.setItem('gb_accounts',  JSON.stringify(accounts));
   localStorage.setItem('gb_transfers', JSON.stringify(transfers));
+  localStorage.setItem('gb_fx_status', JSON.stringify(fxStatus));
   localStorage.setItem('gb_txCats',    JSON.stringify(txCats));
   localStorage.setItem('gb_assetCats', JSON.stringify(assetCats));
   localStorage.setItem('gb_fixedCats', JSON.stringify(fixedCats));
@@ -975,6 +983,14 @@ function addFixed(){
   document.getElementById('fx-name').value=''; document.getElementById('fx-amt').value=''; document.getElementById('fx-day').value='';
 }
 function delFixed(id){fixeds=fixeds.filter(f=>f.id!==id); save(); render();}
+
+// ── 고정지출 상태 ──
+function fxKey(fxId,ym){return `${ym}_${fxId}`;}
+function getFxStatus(fxId,ym){return fxStatus[fxKey(fxId,ym)]||'pending';}
+function setFxStatus(fxId,ym,st){
+  fxStatus[fxKey(fxId,ym)]=st;
+  save(); render();
+}
 
 // ── ACCOUNTS ──
 function addAccount(){
@@ -1408,9 +1424,47 @@ function render(){
   document.getElementById('fx-tot').textContent=fmt(ft);
   document.getElementById('fx-yr').textContent=fmt(ft*12);
   document.getElementById('fx-cnt').textContent=fixeds.length+'개';
-  document.getElementById('fx-list').innerHTML=fixeds.length?fixeds.map(f=>`<div class="fi"><div class="f-nm">${f.name}</div><div class="f-amt">${fmt(f.amount)}/월</div><div class="f-meta">${f.cat} · 매월 ${f.day}일</div><div class="ifoot"><button class="btn-del" onclick="delFixed(${f.id})">✕</button></div></div>`).join(''):'<div class="empty">고정 지출을 추가해보세요</div>';
+  const fxLbl=document.getElementById('fx-month-label');
+  if(fxLbl)fxLbl.textContent=`${hY}년 ${hM+1}월`;
+
+  // 3일 내 예정 알림
+  const todayDate=new Date();
+  const todayNum=todayDate.getFullYear()===hY&&todayDate.getMonth()===hM?todayDate.getDate():null;
+  const alertEl=document.getElementById('fx-alert');
+  if(alertEl&&todayNum){
+    const soon=fixeds.filter(f=>f.day>=todayNum&&f.day<=todayNum+3&&getFxStatus(f.id,ym)==='pending');
+    if(soon.length>0){
+      alertEl.style.display='block';
+      alertEl.innerHTML=`⏰ <b>${soon.length}건</b> 곧 결제 예정 &nbsp;`+soon.map(f=>`<span style="margin-right:10px">${f.day}일 ${f.name} ${fmt(f.amount)}</span>`).join('');
+    } else alertEl.style.display='none';
+  }
+
+  const stMap={'pending':'예정','done':'완료','skip':'건너뜀'};
+  const stColor={'pending':'var(--mu)','done':'var(--ic)','skip':'var(--ex)'};
   document.getElementById('fx-empty').style.display=fixeds.length?'none':'block';
-  document.getElementById('fx-table').innerHTML=[...fixeds].sort((a,b)=>a.day-b.day).map(f=>`<tr><td>${f.name}</td><td><span class="bdg fixed-b">${f.cat}</span></td><td style="color:var(--mu);font-size:12px">매월 ${f.day}일</td><td style="text-align:right"><span style="color:#c084fc;font-weight:500">${fmt(f.amount)}</span></td><td><button class="btn-del" onclick="delFixed(${f.id})">✕</button></td></tr>`).join('');
+  document.getElementById('fx-table').innerHTML=[...fixeds].sort((a,b)=>a.day-b.day).map(f=>{
+    const st=getFxStatus(f.id,ym);
+    return`<tr style="${st==='done'?'opacity:.6':''}${st==='skip'?'text-decoration:line-through;opacity:.4':''}">
+      <td>${f.name}</td>
+      <td><span class="bdg fixed-b">${f.cat}</span></td>
+      <td style="color:var(--mu);font-size:12px">매월 ${f.day}일</td>
+      <td style="text-align:right"><span style="color:#c084fc;font-weight:500">${fmt(f.amount)}</span></td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button onclick="setFxStatus(${f.id},'${ym}','pending')" style="padding:3px 8px;border-radius:5px;font-size:11px;border:1px solid var(--bd);cursor:pointer;font-family:var(--font);background:${st==='pending'?'var(--mu)':'var(--sf2)'};color:${st==='pending'?'#fff':'var(--mu)'}">예정</button>
+          <button onclick="setFxStatus(${f.id},'${ym}','done')" style="padding:3px 8px;border-radius:5px;font-size:11px;border:1px solid ${st==='done'?'var(--ic)':'var(--bd)'};cursor:pointer;font-family:var(--font);background:${st==='done'?'rgba(74,222,128,.15)':'var(--sf2)'};color:${st==='done'?'var(--ic)':'var(--mu)'}">✓ 완료</button>
+          <button onclick="setFxStatus(${f.id},'${ym}','skip')" style="padding:3px 8px;border-radius:5px;font-size:11px;border:1px solid ${st==='skip'?'var(--ex)':'var(--bd)'};cursor:pointer;font-family:var(--font);background:${st==='skip'?'rgba(248,113,113,.15)':'var(--sf2)'};color:${st==='skip'?'var(--ex)':'var(--mu)'}">건너뜀</button>
+        </div>
+      </td>
+      <td><button class="btn-del" onclick="delFixed(${f.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('fx-list').innerHTML=fixeds.length?fixeds.map(f=>{
+    const st=getFxStatus(f.id,ym);
+    const stBadge=`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${st==='done'?'rgba(74,222,128,.15)':st==='skip'?'rgba(248,113,113,.15)':'var(--bd)'};color:${stColor[st]}">${stMap[st]}</span>`;
+    return`<div class="fi"><div class="f-nm">${f.name} ${stBadge}</div><div class="f-amt">${fmt(f.amount)}/월</div><div class="f-meta">${f.cat} · 매월 ${f.day}일</div><div class="ifoot"><button class="btn-del" onclick="delFixed(${f.id})">✕</button></div></div>`;
+  }).join(''):'<div class="empty">고정 지출을 추가해보세요</div>';
 
   // 통장 관리
   const acYm=`${hY}-${pad(hM+1)}`;
