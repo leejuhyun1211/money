@@ -1106,6 +1106,7 @@ function render(){
       <div class="a-nm">${a.name}</div>
       <div class="a-amt" style="color:${bal>=0?'var(--go)':'var(--ex)'}">${bal<0?'-':''}${fmt(bal)}</div>
       <div style="font-size:11px;color:var(--mu);margin-top:4px">${a.num||'계좌번호 없음'}</div>
+      <div class="ifoot"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
     </div>`;
   }).join('');
 
