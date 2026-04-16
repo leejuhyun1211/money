@@ -284,6 +284,7 @@ tr:hover td{background:var(--sf2);}
     <button class="nav-tab" onclick="P('assets',this)">💎 총 자산</button>
     <button class="nav-tab" onclick="P('fixed',this)">🔁 고정 지출</button>
     <button class="nav-tab" onclick="P('accounts',this)">🏦 통장 & 카드</button>
+    <button class="nav-tab" onclick="P('transfer',this)">💸 이체</button>
     <button class="nav-tab st" onclick="P('settings',this)">⚙ 설정</button>
   </nav>
   <div class="sidebar-profile">
@@ -592,7 +593,6 @@ tr:hover td{background:var(--sf2);}
   <div style="display:flex;gap:6px;margin-bottom:1.2rem">
     <button class="ac-tab active" id="act-bank" onclick="setAcTab('bank',this)">🏦 통장</button>
     <button class="ac-tab" id="act-card" onclick="setAcTab('card',this)">💳 신용카드</button>
-    <button class="ac-tab" id="act-transfer" onclick="setAcTab('transfer',this)">💸 이체</button>
     <button class="ac-tab" id="act-add" onclick="setAcTab('add',this)">＋ 추가</button>
   </div>
 
@@ -646,44 +646,6 @@ tr:hover td{background:var(--sf2);}
     </div>
   </div>
 
-  <!-- 이체 탭 -->
-  <div id="ac-panel-transfer" style="display:none">
-    <div class="box">
-      <div class="box-hd"><h2>💸 이체</h2></div>
-      <div class="box-bd">
-        <div class="form-row">
-          <div class="field"><label>보내는 곳</label><select id="tr-from" onchange="renderTransferPreview()"></select></div>
-          <div class="field" style="align-items:center;justify-content:center;flex:0;min-width:30px">
-            <label style="opacity:0">→</label>
-            <span style="font-size:20px;color:var(--mu)">→</span>
-          </div>
-          <div class="field"><label>받는 곳</label><select id="tr-to" onchange="renderTransferPreview()"></select></div>
-          <div class="field"><label>금액</label><input id="tr-amt" type="number" placeholder="100000" oninput="renderTransferPreview()"></div>
-          <div class="field"><label>날짜</label><input id="tr-date" type="date"></div>
-          <div class="field"><label>목적</label>
-            <select id="tr-purpose">
-              <option value="move">내 자산 이동</option>
-              <option value="saving">저축 이체</option>
-              <option value="card">카드값 납부</option>
-              <option value="debt">부채 상환</option>
-              <option value="shared">공유 통장 입금</option>
-              <option value="date">데이트 비용 정산</option>
-            </select>
-          </div>
-          <div class="field"><label>메모 (선택)</label><input id="tr-memo" placeholder="이번달 데이트 비용"></div>
-          <button class="btn btn-blue" onclick="doTransfer()">이체</button>
-        </div>
-        <div id="tr-preview" style="margin-top:10px;padding:10px 14px;background:var(--sf2);border-radius:8px;font-size:12px;color:var(--mu);display:none"></div>
-      </div>
-    </div>
-    <div class="box">
-      <div class="box-hd"><h2>이체 내역</h2></div>
-      <table><thead><tr><th>날짜</th><th>보내는 곳</th><th>받는 곳</th><th>목적</th><th>메모</th><th style="text-align:right">금액</th><th></th></tr></thead>
-      <tbody id="tr-body"></tbody></table>
-      <div class="empty" id="tr-empty">이체 내역이 없습니다</div>
-    </div>
-  </div>
-
   <!-- 추가 탭 -->
   <div id="ac-panel-add" style="display:none">
     <div class="box">
@@ -710,6 +672,54 @@ tr:hover td{background:var(--sf2);}
           <button class="btn btn-blue" onclick="addAccount()">추가</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 이체 -->
+<div class="page" id="page-transfer">
+  <div style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.35rem;font-weight:700;margin:0 0 4px">이체 <span style="font-size:13px;font-weight:400;color:var(--mu);margin-left:8px">통장 간 이동, 저축 이체, 카드값 납부 등을 구분해서 관리하세요.</span></h2>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(0,420px) 1fr;gap:16px;align-items:flex-start">
+    <!-- 좌측: 이체 폼 -->
+    <div class="box" style="margin:0">
+      <div class="box-hd"><h2>💸 이체</h2></div>
+      <div class="box-bd">
+        <div class="mf" style="margin-bottom:14px"><label>이체 목적</label>
+          <div id="tr-purpose-btns" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px"></div>
+          <input id="tr-purpose" type="hidden" value="move">
+        </div>
+        <div class="mf"><label>보내는 곳</label>
+          <select id="tr-from" onchange="renderTransferPreview()"></select>
+        </div>
+        <div style="text-align:center;color:var(--mu);font-size:16px;margin:4px 0">↓</div>
+        <div class="mf"><label>받는 곳</label>
+          <select id="tr-to" onchange="renderTransferPreview()"></select>
+        </div>
+        <div class="mf"><label>금액</label>
+          <input id="tr-amt" type="number" placeholder="0" oninput="renderTransferPreview()">
+          <div style="display:flex;gap:4px;margin-top:6px">
+            <button type="button" onclick="addTrAmt(10000)" class="btn btn-sm" style="flex:1;background:var(--sf2);border:1px solid var(--bd);color:var(--mu);font-size:12px">+1만</button>
+            <button type="button" onclick="addTrAmt(50000)" class="btn btn-sm" style="flex:1;background:var(--sf2);border:1px solid var(--bd);color:var(--mu);font-size:12px">+5만</button>
+            <button type="button" onclick="addTrAmt(100000)" class="btn btn-sm" style="flex:1;background:var(--sf2);border:1px solid var(--bd);color:var(--mu);font-size:12px">+10만</button>
+            <button type="button" onclick="addTrAmtAll()" class="btn btn-sm" style="flex:1;background:var(--sf2);border:1px solid var(--bd);color:var(--mu);font-size:12px">전액</button>
+          </div>
+        </div>
+        <div class="mr" style="margin-top:10px">
+          <div class="mf"><label>날짜</label><input id="tr-date" type="date"></div>
+          <div class="mf"><label>메모 (선택)</label><input id="tr-memo" placeholder="이번달 비용"></div>
+        </div>
+        <div id="tr-preview" style="margin-top:12px;padding:10px 14px;background:rgba(16,185,129,.08);border-radius:8px;font-size:12px;color:var(--mu);display:none"></div>
+        <button class="btn" onclick="doTransfer()" style="background:var(--ac);color:#fff;width:100%;margin-top:12px;padding:12px;font-weight:600">이체하기</button>
+      </div>
+    </div>
+    <!-- 우측: 이체 내역 -->
+    <div class="box" style="margin:0;overflow-x:auto">
+      <div class="box-hd"><h2>최근 이체 내역</h2></div>
+      <table><thead><tr><th>날짜</th><th>목적</th><th>보내는 곳</th><th>받는 곳</th><th style="text-align:right">금액</th><th>메모</th><th></th></tr></thead>
+      <tbody id="tr-body"></tbody></table>
+      <div class="empty" id="tr-empty">이체 내역이 없습니다</div>
     </div>
   </div>
 </div>
@@ -1553,6 +1563,28 @@ function addAccount(){
 function delAccount(id){accounts=accounts.filter(a=>a.id!==id); save(); render();}
 
 const TRANSFER_PURPOSES={move:'내 자산 이동',saving:'저축 이체',card:'카드값 납부',debt:'부채 상환',shared:'공유 통장 입금',date:'데이트 정산'};
+const TRANSFER_PURPOSE_ICONS={move:'🔁',saving:'💰',card:'💳',debt:'🏦',shared:'👥',date:'💑'};
+function setTransferPurpose(p){
+  document.getElementById('tr-purpose').value=p;
+  document.querySelectorAll('#tr-purpose-btns .tr-pbtn').forEach(b=>{
+    const active=b.dataset.p===p;
+    b.classList.toggle('active',active);
+    b.style.background=active?'rgba(16,185,129,.1)':'var(--sf2)';
+    b.style.borderColor=active?'var(--ac)':'var(--bd)';
+    b.style.color=active?'var(--ac)':'var(--mu)';
+  });
+}
+function addTrAmt(n){
+  const el=document.getElementById('tr-amt');
+  el.value=(parseInt(el.value)||0)+n;
+  renderTransferPreview();
+}
+function addTrAmtAll(){
+  const fromId=document.getElementById('tr-from').value;
+  if(!fromId) return;
+  const bal=acctBal(fromId);
+  if(bal>0){document.getElementById('tr-amt').value=bal;renderTransferPreview();}
+}
 
 function doTransfer(){
   const fromId=document.getElementById('tr-from').value;
@@ -2255,6 +2287,16 @@ function render(){
   const bankAccts=modeAccts.filter(a=>a.actype!=='card');
   const cardAccts2=modeAccts.filter(a=>a.actype==='card');
 
+  // 이체 목적 버튼
+  const tpBtns=document.getElementById('tr-purpose-btns');
+  if(tpBtns){
+    const cur=document.getElementById('tr-purpose')?.value||'move';
+    tpBtns.innerHTML=Object.entries(TRANSFER_PURPOSES).map(([k,v])=>{
+      const active=k===cur;
+      return `<button type="button" class="tr-pbtn${active?' active':''}" data-p="${k}" onclick="setTransferPurpose('${k}')" style="background:${active?'rgba(16,185,129,.1)':'var(--sf2)'};border:1px solid ${active?'var(--ac)':'var(--bd)'};border-radius:8px;padding:10px 8px;color:${active?'var(--ac)':'var(--mu)'};font-size:12px;cursor:pointer;font-family:var(--font);text-align:center"><div style="font-size:16px;margin-bottom:2px">${TRANSFER_PURPOSE_ICONS[k]}</div>${v}</button>`;
+    }).join('');
+  }
+
   // 이체 내역
   const trBody=document.getElementById('tr-body');
   if(trBody){
@@ -2263,7 +2305,7 @@ function render(){
       const from=accounts.find(a=>String(a.id)===String(t.fromId));
       const to=accounts.find(a=>String(a.id)===String(t.toId));
       const purposeLbl=TRANSFER_PURPOSES[t.purpose||'move']||'내 자산 이동';
-      return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${from?.name||'?'} <span style="color:var(--mu)">(${from?.include===false?'공유':'내 자산'})</span></td><td>${to?.name||'?'} <span style="color:var(--mu)">(${to?.include===false?'공유':'내 자산'})</span></td><td><span style="background:rgba(96,165,250,.12);color:var(--ac);padding:2px 7px;border-radius:4px;font-size:11px">${purposeLbl}</span></td><td style="color:var(--mu);font-size:12px">${t.memo}</td><td style="text-align:right"><span style="color:var(--ac);font-weight:500">${fmt(t.amt)}</span></td><td><button class="btn-del" onclick="delTransfer(${t.id})">✕</button></td></tr>`;
+      return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td><span style="background:rgba(16,185,129,.12);color:var(--ac);padding:2px 7px;border-radius:4px;font-size:11px">${purposeLbl}</span></td><td>${from?.name||'?'}</td><td>${to?.name||'?'}</td><td style="text-align:right;font-weight:600">${fmt(t.amt)}</td><td style="color:var(--mu);font-size:12px">${t.memo||''}</td><td><button class="btn-del" onclick="delTransfer(${t.id})">✕</button></td></tr>`;
     }).join('');
   }
 
