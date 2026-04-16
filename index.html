@@ -922,7 +922,7 @@ function renderDashboard(ym,mTxs,mFix){
   const ds=document.getElementById('d-left-sub');
   if(ds)ds.textContent=`수입 ${fmt(inc)} · 지출 ${fmt(exp+mFix)}`;
 
-  const upcoming=todayD?fixeds.filter(f=>f.day>=todayD&&f.day<=todayD+3):[];
+  const upcoming=(todayD&&appMode!=='date')?fixeds.filter(f=>f.day>=todayD&&f.day<=todayD+3):[];
   const upAmt=upcoming.reduce((s,f)=>s+f.amount,0);
   const du=document.getElementById('d-upcoming');
   if(du)du.textContent=upAmt>0?fmt(upAmt):'없음';
@@ -1146,7 +1146,9 @@ function refreshSelects(){
   fs('fx-cat',fxAllCats);
   // 통장 셀렉트 공통 업데이트
   const acctOpts='<option value="">없음</option>'+accounts.map(a=>`<option value="${a.id}">${a.name}${a.include===false?' (공유)':''}</option>`).join('');
-  ['f-acct','c-acct','et-acct','fx-acct'].forEach(id=>{
+  // 고정지출은 공유통장과 연동 금지 → 내 통장만
+  const acctOptsOwn='<option value="">없음</option>'+accounts.filter(a=>a.include!==false).map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  ['f-acct','c-acct','et-acct'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
     const v=el.value; el.innerHTML=acctOpts;
     if((id==='f-acct'||id==='c-acct') && !v && settings.defaultAcctId && accounts.find(a=>String(a.id)===String(settings.defaultAcctId))){
@@ -1155,6 +1157,8 @@ function refreshSelects(){
       el.value=v;
     }
   });
+  const fxAcctEl=document.getElementById('fx-acct');
+  if(fxAcctEl){const v=fxAcctEl.value; fxAcctEl.innerHTML=acctOptsOwn; fxAcctEl.value=v;}
   // 이체 셀렉트
   const trOpts=accounts.map(a=>`<option value="${a.id}">${a.name}${a.include===false?' 💑':' 👤'}</option>`).join('');
   const trF=document.getElementById('tr-from'), trT=document.getElementById('tr-to');
@@ -1536,7 +1540,7 @@ function renderDP(){
   if(!selDate)return;
   const d=new Date(selDate+'T00:00:00');
   const dtxs=txs.filter(t=>t.date===selDate);
-  const dfx=fixeds.filter(f=>f.day===d.getDate());
+  const dfx=appMode==='date'?[]:fixeds.filter(f=>f.day===d.getDate());
   const list=document.getElementById('dp-list');
   // 지난달 같은 날 비교
   const prev=new Date(d); prev.setMonth(prev.getMonth()-1);
@@ -1566,7 +1570,7 @@ function renderCal(){
   const mTxs=txs.filter(t=>t.date&&t.date.slice(0,7)===ym);
   const mInc=mTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const mExp=mTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const mFix=fixeds.reduce((s,f)=>s+f.amount,0);
+  const mFix=appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0);
   const mBal=mInc-mExp-mFix;
   document.getElementById('cal-inc').textContent=fmt(mInc);
   document.getElementById('cal-exp').textContent=fmt(mExp+mFix);
@@ -1657,8 +1661,10 @@ function renderYearly(){
   html+=row('지출(변동)','rt',mt=>mt.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0));
   html+=`<tr class="rh"><td>카테고리별 지출</td>${mos.map(()=>'<td></td>').join('')}<td></td></tr>`;
   txCats.filter(c=>c!=='저축'&&c!=='급여').forEach(cat=>{html+=row(cat,'rc',mt=>mt.filter(t=>t.type==='expense'&&t.cat===cat).reduce((s,t)=>s+t.amount,0));});
-  html+=`<tr class="rh"><td>고정 지출</td>${mos.map(m=>`<td class="neg">-${fmt(fixeds.reduce((s,f)=>s+f.amount,0))}</td>`).join('')}<td class="neg">-${fmt(allFix)}</td></tr>`;
-  fixeds.forEach(f=>{html+=`<tr class="rc"><td style="padding-left:22px;color:var(--mu)">${f.name}</td>${mos.map(()=>`<td class="neg">-${fmt(f.amount)}</td>`).join('')}<td class="neg">-${fmt(f.amount*12)}</td></tr>`;});
+  if(appMode!=='date'){
+    html+=`<tr class="rh"><td>고정 지출</td>${mos.map(m=>`<td class="neg">-${fmt(fixeds.reduce((s,f)=>s+f.amount,0))}</td>`).join('')}<td class="neg">-${fmt(allFix)}</td></tr>`;
+    fixeds.forEach(f=>{html+=`<tr class="rc"><td style="padding-left:22px;color:var(--mu)">${f.name}</td>${mos.map(()=>`<td class="neg">-${fmt(f.amount)}</td>`).join('')}<td class="neg">-${fmt(f.amount*12)}</td></tr>`;});
+  }
   html+=`<tr class="rh"><td>저축·적금</td>${mos.map(()=>'<td></td>').join('')}<td></td></tr>`;
   html+=row('저축','rc',mt=>mt.filter(t=>t.type==='expense'&&t.cat==='저축').reduce((s,t)=>s+t.amount,0));
   html+='</tbody>';
