@@ -327,22 +327,42 @@ tr:hover td{background:var(--sf2);}
     </div>
   </div>
 
-  <!-- 전체 거래 내역 (접기/펼치기) -->
+  <!-- 전체 거래 내역 -->
   <div class="box">
     <div class="box-hd">
       <h2>전체 거래 내역</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:4px;cursor:pointer">
-          <input type="checkbox" id="show-fixed" checked onchange="render()" style="width:auto;padding:0">고정지출 표시
-        </label>
-        <div class="ftabs">
-          <button class="ftab active" onclick="setF('all',this)">전체</button>
-          <button class="ftab" onclick="setF('income',this)">수입</button>
-          <button class="ftab" onclick="setF('expense',this)">지출</button>
+      <label style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="show-fixed" checked onchange="render()" style="width:auto;padding:0">고정지출 표시
+      </label>
+    </div>
+    <!-- 검색 + 필터 -->
+    <div style="padding:12px 1.4rem;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px">
+        <input id="tx-search" placeholder="🔍  내용, 카테고리 검색..." oninput="render()" style="flex:1">
+        <button onclick="toggleTxFilter()" id="tx-filter-btn" style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;color:var(--mu);font-size:12px;padding:8px 14px;cursor:pointer;white-space:nowrap;font-family:var(--font)">⚙ 필터</button>
+      </div>
+      <!-- 유형 탭 -->
+      <div class="ftabs">
+        <button class="ftab active" onclick="setF('all',this)">전체</button>
+        <button class="ftab" onclick="setF('income',this)">수입</button>
+        <button class="ftab" onclick="setF('expense',this)">지출</button>
+      </div>
+      <!-- 확장 필터 (접기/펼치기) -->
+      <div id="tx-filter-panel" style="display:none;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="field"><label>카테고리</label>
+          <select id="f-filter-cat" onchange="render()"><option value="">전체</option></select>
+        </div>
+        <div class="field"><label>통장/카드</label>
+          <select id="f-filter-acct" onchange="render()"><option value="">전체</option></select>
+        </div>
+        <div class="field"><label>금액 이상</label>
+          <input id="f-filter-min" type="number" placeholder="0" oninput="render()">
         </div>
       </div>
     </div>
-    <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th style="text-align:right">금액</th><th></th></tr></thead>
+    <!-- 요약 -->
+    <div id="tx-summary" style="padding:10px 1.4rem;border-bottom:1px solid var(--bd);display:flex;gap:16px;font-size:12px;color:var(--mu);flex-wrap:wrap"></div>
+    <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th>통장/카드</th><th style="text-align:right">금액</th><th></th></tr></thead>
     <tbody id="tx-body"></tbody></table>
     <div class="empty" id="tx-empty">
       <div style="font-size:2rem;margin-bottom:8px">📭</div>
@@ -865,6 +885,11 @@ function refreshSelects(){
   if(trT){const v=trT.value; trT.innerHTML=trOpts; trT.value=v;}
   const af=document.getElementById('ac-filter');
   if(af){const v=af.value; af.innerHTML='<option value="">전체</option>'+accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join(''); af.value=v;}
+  // 필터 패널 셀렉트
+  const ffc=document.getElementById('f-filter-cat');
+  if(ffc){const v=ffc.value;ffc.innerHTML='<option value="">전체 카테고리</option>'+txCats.map(c=>`<option value="${c}">${c}</option>`).join('');ffc.value=v;}
+  const ffa=document.getElementById('f-filter-acct');
+  if(ffa){const v=ffa.value;ffa.innerHTML='<option value="">전체 통장/카드</option>'+accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');ffa.value=v;}
 }
 
 // ── SETTINGS ──
@@ -902,6 +927,16 @@ function addTx(src){
 }
 function delTx(id){txs=txs.filter(t=>t.id!==id); save(); render();}
 function setF(m,el){txFil=m; document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); render();}
+
+let txFilterOpen=false;
+function toggleTxFilter(){
+  txFilterOpen=!txFilterOpen;
+  const p=document.getElementById('tx-filter-panel');
+  const btn=document.getElementById('tx-filter-btn');
+  if(p){p.style.display=txFilterOpen?'grid':'none';}
+  if(btn)btn.style.background=txFilterOpen?'var(--ac)':''
+        ,btn.style.color=txFilterOpen?'#fff':'';
+}
 
 // ── ASSETS ──
 function toggleSavDates(src){
@@ -1245,8 +1280,13 @@ function render(){
     return`<div class="bi"><div class="cat">${cat}</div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div class="bnum"><span class="sp">${fmt(spent)}</span><span>/ ${fmt(b)} (${pct}%)</span></div></div>`;
   }).join('')||'<div style="color:var(--mu);font-size:13px">설정에서 예산을 입력하세요</div>';
 
-  // 거래 내역 테이블 (고정지출은 내 자산 모드에서만)
+  // 거래 내역 테이블 (검색 + 필터 적용)
   const showFixed=document.getElementById('show-fixed').checked;
+  const searchQ=(document.getElementById('tx-search')?.value||'').trim().toLowerCase();
+  const filterCat=document.getElementById('f-filter-cat')?.value||'';
+  const filterAcct=document.getElementById('f-filter-acct')?.value||'';
+  const filterMin=parseInt(document.getElementById('f-filter-min')?.value)||0;
+
   let rows=[];
   const filt=txFil==='all'?mTxs:mTxs.filter(t=>t.type===txFil);
   filt.forEach(t=>rows.push({...t,isFixed:false}));
@@ -1257,16 +1297,38 @@ function render(){
       rows.push({id:f.id,desc:f.name,amount:f.amount,type:'expense',cat:f.cat,date:`${ym}-${pad(day)}`,isFixed:true,acctId:''});
     });
   }
+  // 필터 적용
+  if(searchQ) rows=rows.filter(t=>(t.desc||'').toLowerCase().includes(searchQ)||(t.cat||'').toLowerCase().includes(searchQ));
+  if(filterCat) rows=rows.filter(t=>t.cat===filterCat);
+  if(filterAcct) rows=rows.filter(t=>t.acctId===filterAcct);
+  if(filterMin>0) rows=rows.filter(t=>t.amount>=filterMin);
   rows.sort((a,b)=>b.date.localeCompare(a.date));
+
+  // 요약
+  const sumEl=document.getElementById('tx-summary');
+  if(sumEl){
+    const sumInc=rows.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const sumExp=rows.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const topCat=txCats.map(c=>({c,v:rows.filter(t=>t.cat===c).reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.v-a.v)[0];
+    sumEl.innerHTML=`<span>총 <b style="color:var(--tx)">${rows.length}건</b></span>`
+      +(sumInc?`<span>수입 <b style="color:var(--ic)">${fmt(sumInc)}</b></span>`:'')
+      +(sumExp?`<span>지출 <b style="color:var(--ex)">${fmt(sumExp)}</b></span>`:'')
+      +(topCat?.v?`<span>최다 <b style="color:var(--go)">${topCat.c}</b></span>`:'');
+  }
+
   document.getElementById('tx-empty').style.display=rows.length?'none':'block';
-  document.getElementById('tx-body').innerHTML=rows.map(t=>`<tr${t.isFixed?' style="opacity:.7"':''}>
-    <td style="color:var(--mu);font-size:11px">${t.date}</td>
-    <td>${t.desc}${t.isFixed?` <span class="bdg auto">고정</span>`:''}</td>
-    <td style="color:var(--mu);font-size:12px">${t.cat}</td>
-    <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
-    <td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td>
-    <td style="white-space:nowrap">${!t.isFixed?`<button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button>`:''}</td>
-  </tr>`).join('');
+  document.getElementById('tx-body').innerHTML=rows.map(t=>{
+    const acct=accounts.find(a=>String(a.id)===String(t.acctId));
+    return`<tr${t.isFixed?' style="opacity:.7"':''}>
+      <td style="color:var(--mu);font-size:11px">${t.date}</td>
+      <td>${t.desc}${t.isFixed?` <span class="bdg auto">고정</span>`:''}</td>
+      <td><span style="background:var(--sf2);padding:2px 7px;border-radius:4px;font-size:11px">${t.cat}</span></td>
+      <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
+      <td style="font-size:11px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:''}</td>
+      <td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td>
+      <td style="white-space:nowrap">${!t.isFixed?`<button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button>`:''}</td>
+    </tr>`;
+  }).join('');
 
   // 캘린더
   renderCal();
