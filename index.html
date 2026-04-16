@@ -657,6 +657,16 @@ tr:hover td{background:var(--sf2);}
     </div>
     <div style="font-size:11px;color:var(--mu);margin-top:6px">기본 통장을 설정하면 빠른 거래 추가 시 자동으로 선택됩니다.</div>
   </div>
+  <div class="ss"><h3>데이터 관리</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-gh" onclick="exportData()" style="font-size:13px">📥 백업 내보내기</button>
+      <label class="btn btn-gh" style="font-size:13px;cursor:pointer;margin:0">
+        📤 백업 불러오기
+        <input type="file" accept="application/json" onchange="importData(event)" style="display:none">
+      </label>
+    </div>
+    <div style="font-size:11px;color:var(--mu);margin-top:6px">모든 거래/자산/고정지출/통장/설정이 JSON 파일로 저장됩니다.</div>
+  </div>
   <div class="ss"><h3>계정</h3>
     <button class="btn btn-gh" onclick="doLogout()" style="font-size:13px">🚪 로그아웃</button>
   </div>
@@ -835,7 +845,7 @@ function renderDashboard(ym,mTxs,mFix){
   if(dbs)dbs.textContent=overCat&&overCat.pct>0?`${overCat.c} ${overCat.pct}% 사용`:'예산 미입력';
 
   const cardAccts=accounts.filter(a=>a.actype==='card'&&a.include!==false);
-  const cardAmt=cardAccts.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date&&t.date.slice(0,7)===ym).reduce((ss,t)=>ss+t.amount,0),0);
+  const cardAmt=cardAccts.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&ymKey(t.date)===ym).reduce((ss,t)=>ss+t.amount,0),0);
   const dc=document.getElementById('d-card');
   if(dc)dc.textContent=cardAmt>0?fmt(cardAmt):'없음';
   const dcs=document.getElementById('d-card-sub');
@@ -843,7 +853,8 @@ function renderDashboard(ym,mTxs,mFix){
 
   if(todayD){
     const dayBudget=totalBudget>0?Math.round(totalBudget/dim):0;
-    const todaySpent=txs.filter(t=>t.date===`${ym}-${pad(todayD)}`&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const todayStr=fdStr(_now);
+    const todaySpent=txs.filter(t=>t.date===todayStr&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const tl=document.getElementById('d-today-left');
     if(tl){const v=dayBudget-todaySpent;tl.textContent=(v<0?'-':'')+fmt(v);tl.style.color=v>=0?'var(--ac)':'var(--ex)';}
   }
@@ -861,8 +872,8 @@ function renderDashboard(ym,mTxs,mFix){
   const ft=document.getElementById('f-type');
   if(ft){ft.value=qType;ft.style.display='none';}
 
-  const prevYm=hM===0?`${hY-1}-12`:`${hY}-${pad(hM)}`;
-  const prevExp2=txs.filter(t=>t.date&&t.date.slice(0,7)===prevYm&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const prevYm=prevYmOf(ym);
+  const prevExp2=txs.filter(t=>ymKey(t.date)===prevYm&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const diff=prevExp2>0?Math.round((exp-prevExp2)/prevExp2*100):0;
   const insight=document.getElementById('d-insight'),insightTxt=document.getElementById('d-insight-txt');
   if(insight&&insightTxt){
@@ -923,6 +934,81 @@ function save(){
 const fmt  = n => '₩' + Math.abs(n).toLocaleString('ko-KR');
 const pad  = n => String(n).padStart(2,'0');
 const fdStr= d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+// 월 시작일 기반 YYYY-MM 키 (거래 날짜를 어느 "월"로 분류할지)
+function ymKey(dateStr){
+  if(!dateStr) return '';
+  const startDay=settings.monthStartDay||1;
+  if(startDay===1) return dateStr.slice(0,7);
+  const [y,m,d]=dateStr.split('-').map(Number);
+  let yy=y, mm=m;
+  if(d>=startDay){ mm=m+1; if(mm>12){mm=1;yy=y+1;} }
+  return `${yy}-${pad(mm)}`;
+}
+// ym(YYYY-MM)에서 고정지출 day의 실제 달력 날짜
+function fixedDateStr(ym, day){
+  const startDay=settings.monthStartDay||1;
+  const [y,m]=ym.split('-').map(Number);
+  if(startDay===1){
+    const dim=new Date(y,m,0).getDate();
+    return `${y}-${pad(m)}-${pad(Math.min(day,dim))}`;
+  }
+  let yy, mm;
+  if(day>=startDay){ mm=m-1; yy=y; if(mm<1){mm=12;yy=y-1;} }
+  else { mm=m; yy=y; }
+  const dim=new Date(yy,mm,0).getDate();
+  return `${yy}-${pad(mm)}-${pad(Math.min(day,dim))}`;
+}
+// ym의 이전 월 ym 계산
+function prevYmOf(ym){
+  const [y,m]=ym.split('-').map(Number);
+  return m===1 ? `${y-1}-12` : `${y}-${pad(m-1)}`;
+}
+
+const STORAGE_KEYS=['gb_txs','gb_assets','gb_fixeds','gb_accounts','gb_transfers','gb_fx_status','gb_txCats','gb_assetCats','gb_fixedCats','gb_budgets','gb_settings'];
+
+function exportData(){
+  const data={_version:1,_exportedAt:new Date().toISOString()};
+  STORAGE_KEYS.forEach(k=>{
+    const v=localStorage.getItem(k);
+    if(v!==null){
+      try{ data[k]=JSON.parse(v); }catch(e){ data[k]=v; }
+    }
+  });
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date();
+  a.href=url;
+  a.download=`가계부_백업_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const hasAny=STORAGE_KEYS.some(k=>data[k]!==undefined);
+      if(!hasAny) throw new Error('백업 데이터가 비어있습니다');
+      if(!confirm('현재 데이터를 덮어씁니다. 계속하시겠습니까?')){
+        event.target.value=''; return;
+      }
+      STORAGE_KEYS.forEach(k=>{
+        if(data[k]!==undefined) localStorage.setItem(k,JSON.stringify(data[k]));
+      });
+      alert('불러오기 완료. 페이지를 새로고침합니다.');
+      location.reload();
+    }catch(err){
+      alert('올바른 백업 파일이 아닙니다: '+err.message);
+      event.target.value='';
+    }
+  };
+  reader.readAsText(file);
+}
 
 // ── NAV ──
 function P(id, el){
@@ -1014,6 +1100,13 @@ function addTx(src){
   else{document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';}
 }
 function delTx(id){txs=txs.filter(t=>t.id!==id); save(); render();}
+function dupTx(id){
+  const t=txs.find(x=>x.id===id); if(!t) return;
+  const copy={...t,id:Date.now(),date:fdStr(new Date())};
+  delete copy.transferId;
+  txs.unshift(copy);
+  save(); render();
+}
 function setF(m,el){txFil=m; document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); render();}
 
 let txFilterOpen=false;
@@ -1207,13 +1300,13 @@ function renderYearly(){
   document.getElementById('yr-exp').textContent=fmt(yE);
   document.getElementById('yr-sav').textContent=fmt(yS);
   document.getElementById('yr-bal').textContent=(yB<0?'-':'')+fmt(yB);
-  const md=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>t.date&&t.date.slice(0,7)===ym));return{i:mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),e:mt.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0)+(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0))};});
+  const md=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>ymKey(t.date)===ym));return{i:mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),e:mt.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0)+(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0))};});
   const mx=Math.max(...md.map(d=>Math.max(d.i,d.e)),1);
   document.getElementById('yr-chart').innerHTML=md.map((d,i)=>`<div class="ybg"><div class="ybs" style="height:100px"><div class="ybr" style="background:var(--ic);height:${Math.round(d.i/mx*100)}px"></div><div class="ybr" style="background:var(--ex);height:${Math.round(d.e/mx*100)}px"></div></div><div class="ybl">${i+1}월</div></div>`).join('');
   const th=mos.map(m=>`<th>${m}월</th>`).join('');
   let html=`<thead><tr><th>구분</th>${th}<th>합계</th></tr></thead><tbody>`;
-  const row=(lbl,cls,fn)=>{const vs=mos.map(m=>fn(modeTxs(txs.filter(t=>t.date&&t.date.slice(0,7)===`${yY}-${pad(m)}`))));const tot=vs.reduce((s,v)=>s+v,0);return`<tr class="${cls}"><td>${lbl}</td>${vs.map(v=>v===0?`<td class="zero">-</td>`:`<td class="${v>0?'pos':'neg'}">${v>0?'':'-'}${fmt(v)}</td>`).join('')}<td class="${tot>0?'pos':tot<0?'neg':'zero'}">${tot===0?'-':(tot>=0?'':'-')+fmt(tot)}</td></tr>`;};
-  const netVs=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>t.date&&t.date.slice(0,7)===ym));return mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)-mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)-(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0));});
+  const row=(lbl,cls,fn)=>{const vs=mos.map(m=>fn(modeTxs(txs.filter(t=>ymKey(t.date)===`${yY}-${pad(m)}`))));const tot=vs.reduce((s,v)=>s+v,0);return`<tr class="${cls}"><td>${lbl}</td>${vs.map(v=>v===0?`<td class="zero">-</td>`:`<td class="${v>0?'pos':'neg'}">${v>0?'':'-'}${fmt(v)}</td>`).join('')}<td class="${tot>0?'pos':tot<0?'neg':'zero'}">${tot===0?'-':(tot>=0?'':'-')+fmt(tot)}</td></tr>`;};
+  const netVs=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>ymKey(t.date)===ym));return mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)-mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)-(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0));});
   const netTot=netVs.reduce((s,v)=>s+v,0);
   html+=`<tr class="rh"><td>수입·지출</td>${netVs.map(v=>v===0?`<td class="zero">-</td>`:`<td class="${v>0?'pos':'neg'}">${v>0?'':'-'}${fmt(v)}</td>`).join('')}<td class="${netTot>=0?'pos':'neg'}">${netTot===0?'-':(netTot>=0?'':'-')+fmt(netTot)}</td></tr>`;
   html+=row('수입','rt',mt=>mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0));
@@ -1351,7 +1444,7 @@ function render(){
   document.querySelector('h1 span').style.color=isDate?'var(--pu)':'var(--ac)';
 
   // 현재 모드에 맞는 거래만 사용
-  const allMTxs=txs.filter(t=>t.date&&t.date.slice(0,7)===ym);
+  const allMTxs=txs.filter(t=>ymKey(t.date)===ym);
   const mTxs=modeTxs(allMTxs);
   const mFix=isDate?0:fixeds.reduce((s,f)=>s+f.amount,0);
   const inc=mTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
@@ -1388,9 +1481,7 @@ function render(){
   filt.forEach(t=>rows.push({...t,isFixed:false}));
   if(!isDate&&showFixed&&txFil!=='income'){
     fixeds.forEach(f=>{
-      const dim=new Date(hY,hM+1,0).getDate();
-      const day=Math.min(f.day,dim);
-      rows.push({id:f.id,desc:f.name,amount:f.amount,type:'expense',cat:f.cat,date:`${ym}-${pad(day)}`,isFixed:true,acctId:''});
+      rows.push({id:f.id,desc:f.name,amount:f.amount,type:'expense',cat:f.cat,date:fixedDateStr(ym,f.day),isFixed:true,acctId:''});
     });
   }
   // 필터 적용
@@ -1422,7 +1513,7 @@ function render(){
       <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
       <td style="font-size:11px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:''}</td>
       <td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td>
-      <td style="white-space:nowrap">${!t.isFixed?`<button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button>`:''}</td>
+      <td style="white-space:nowrap">${!t.isFixed?`<button class="btn-edit" onclick="openTxModal(${t.id})" title="수정">✎</button><button class="btn-edit" onclick="dupTx(${t.id})" title="복제">⎘</button><button class="btn-del" onclick="delTx(${t.id})" title="삭제">✕</button>`:''}</td>
     </tr>`;
   }).join('');
 
@@ -1565,8 +1656,8 @@ function render(){
 
   // 통장 탭
   const modeTot=bankAccts.filter(a=>a.include!==false).reduce((s,a)=>s+acctBalMap[a.id].bal,0);
-  const acInc=txs.filter(t=>t.date&&t.date.slice(0,7)===acYm&&t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
-  const acExp=txs.filter(t=>t.date&&t.date.slice(0,7)===acYm&&t.type==='expense'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const acInc=txs.filter(t=>ymKey(t.date)===acYm&&t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const acExp=txs.filter(t=>ymKey(t.date)===acYm&&t.type==='expense'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
   const acTotEl=document.getElementById('ac-tot');
   if(acTotEl)acTotEl.textContent=fmt(modeTot);
   const acIncEl=document.getElementById('ac-inc');
@@ -1605,9 +1696,9 @@ function render(){
   }
 
   // 신용카드 탭
-  const prevYm2=hM===0?`${hY-1}-${pad(12)}`:`${hY}-${pad(hM)}`;
-  const cardUsed=cardAccts2.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date?.slice(0,7)===acYm).reduce((ss,t)=>ss+t.amount,0),0);
-  const cardPrevUsed=cardAccts2.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date?.slice(0,7)===prevYm2).reduce((ss,t)=>ss+t.amount,0),0);
+  const prevYm2=prevYmOf(acYm);
+  const cardUsed=cardAccts2.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&ymKey(t.date)===acYm).reduce((ss,t)=>ss+t.amount,0),0);
+  const cardPrevUsed=cardAccts2.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&ymKey(t.date)===prevYm2).reduce((ss,t)=>ss+t.amount,0),0);
   const cardDiff=cardPrevUsed>0?Math.round((cardUsed-cardPrevUsed)/cardPrevUsed*100):0;
   const cuEl=document.getElementById('card-used');
   if(cuEl)cuEl.textContent=fmt(cardUsed);
@@ -1619,7 +1710,7 @@ function render(){
   const cardListEl=document.getElementById('acct-list-card');
   if(cardListEl){
     cardListEl.innerHTML=cardAccts2.length?cardAccts2.map(a=>{
-      const thisMonthAmt=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date?.slice(0,7)===acYm).reduce((s,t)=>s+t.amount,0);
+      const thisMonthAmt=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&ymKey(t.date)===acYm).reduce((s,t)=>s+t.amount,0);
       const totalAmt=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
       return`<div class="acct-card" style="border-color:rgba(248,113,113,.2)">
         <div class="acct-bank">💳 ${a.bank||'카드사'} · 신용카드</div>
@@ -1645,7 +1736,7 @@ function render(){
   const ctEmpty=document.getElementById('card-tx-empty');
   if(ctBody){
     ctEmpty.style.display=cardTxs.length?'none':'block';
-    ctBody.innerHTML=cardTxs.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td style="text-align:right"><span class="ae">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></td></tr>`).join('');
+    ctBody.innerHTML=cardTxs.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td style="text-align:right"><span class="ae">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})" title="수정">✎</button><button class="btn-edit" onclick="dupTx(${t.id})" title="복제">⎘</button><button class="btn-del" onclick="delTx(${t.id})" title="삭제">✕</button></td></tr>`).join('');
   }
 
   // 설정
