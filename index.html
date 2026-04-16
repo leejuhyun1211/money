@@ -110,9 +110,10 @@ tr:hover td{background:var(--sf2);}
 .pg.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600;}
 .pg:disabled{opacity:.3;cursor:not-allowed;}
 @media(max-width:600px){.fab{bottom:16px;right:16px;width:52px;height:52px;}}
-@media(max-width:900px){.dash-grid,.cal-grid-split,.yr-grid,.as-row{grid-template-columns:1fr !important;}
+@media(max-width:900px){.dash-grid,.cal-grid-split,.yr-grid,.as-row,.fx-grid{grid-template-columns:1fr !important;}
   #page-yearly .cards,#page-yearly > div[style*="repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr) !important;}
   .as-cards{grid-template-columns:repeat(2,1fr) !important;}
+  .fx-cards{grid-template-columns:repeat(2,1fr) !important;}
 }
 .tbtn.active{background:rgba(16,185,129,.1);color:var(--ac);border-color:var(--ac);}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
@@ -704,16 +705,63 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 고정 지출 -->
 <div class="page" id="page-fixed">
-  <!-- 3일 내 예정 알림 -->
-  <div id="fx-alert" style="display:none;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px 16px;margin-bottom:1rem;font-size:13px;color:#c084fc"></div>
-
-  <div class="cards c3">
-    <div class="card c-pu"><div class="label">월 고정 지출</div><div class="amount" id="fx-tot">₩0</div></div>
-    <div class="card c-gr"><div class="label">연간 고정 지출</div><div class="amount" id="fx-yr">₩0</div></div>
-    <div class="card c-bal"><div class="label">항목 수</div><div class="amount" id="fx-cnt">0개</div></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
+    <h2 style="font-size:1.35rem;font-weight:700;margin:0">고정 지출 <span style="font-size:13px;font-weight:400;color:var(--mu);margin-left:8px">매달 반복되는 지출을 관리하고 결제 상태를 확인하세요.</span></h2>
+    <button onclick="openFixedForm()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:var(--font);font-weight:500">+ 고정지출 추가</button>
   </div>
-  <div class="box">
-    <div class="box-hd"><h2>고정 지출 추가</h2></div>
+
+  <!-- 4카드 -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px" class="fx-cards">
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(16,185,129,.12);color:var(--ac);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">💳</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">월 고정지출</div><div id="fx-tot" style="font-size:1.2rem;font-weight:700;color:var(--ac)">₩0</div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(59,130,246,.12);color:#3b82f6;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">🧮</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">연간 고정지출</div><div id="fx-yr" style="font-size:1.2rem;font-weight:700;color:#3b82f6">₩0</div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(168,85,247,.12);color:#a855f7;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📋</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">항목 수</div><div id="fx-cnt" style="font-size:1.2rem;font-weight:700;color:#a855f7">0건</div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(249,115,22,.12);color:#f97316;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📅</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">3일 내 예정</div><div id="fx-upcoming" style="font-size:1.2rem;font-weight:700;color:#f97316">0건</div></div>
+    </div>
+  </div>
+
+  <!-- 좌/우 분할 -->
+  <div class="fx-grid" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+    <!-- 좌측: 고정 지출 목록 -->
+    <div class="box" style="margin:0;overflow-x:auto">
+      <div class="box-hd" style="justify-content:space-between"><h2>고정 지출 목록</h2><span style="font-size:12px;color:var(--mu)">결제일 순 보기</span></div>
+      <table>
+        <thead><tr><th>이름</th><th>카테고리</th><th>결제일</th><th style="text-align:right">금액</th><th>연결 통장</th><th>이번달 상태</th><th>자동</th><th></th></tr></thead>
+        <tbody id="fx-table"></tbody>
+      </table>
+      <div class="empty" id="fx-empty" style="padding:1.5rem">등록된 고정지출이 없습니다</div>
+    </div>
+
+    <!-- 우측: 이번 달 결제 현황 -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div class="box" style="margin:0">
+        <div class="box-hd"><h2>이번 달 결제 현황</h2></div>
+        <div class="box-bd"><div id="fx-progress" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center"></div></div>
+      </div>
+      <div class="box" style="margin:0">
+        <div class="box-hd"><h2>3일 내 결제 현황</h2></div>
+        <div class="box-bd"><div id="fx-upcoming-list"></div></div>
+      </div>
+      <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px">
+        <div style="font-size:12px;color:var(--ac);font-weight:600;margin-bottom:4px">💡 TIP</div>
+        <div style="font-size:12px;color:var(--mu);line-height:1.6">고정지출 "완료" 버튼을 누르면 결제일에 맞춰 실제 거래가 자동으로 생성되어 관리가 편해집니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 고정 지출 입력 폼 (접힘) -->
+  <div class="box collapsed" id="fx-form-box">
+    <div class="box-hd" onclick="document.getElementById('fx-form-box').classList.toggle('collapsed')" style="cursor:pointer"><h2><span class="collapser">▶</span> 고정지출 입력 폼</h2></div>
     <div class="box-bd">
       <div class="form-row">
         <div class="field"><label>이름</label><input id="fx-name" placeholder="넷플릭스"></div>
@@ -725,18 +773,15 @@ tr:hover td{background:var(--sf2);}
       </div>
     </div>
   </div>
-  <div class="box">
-    <div class="box-hd"><h2>이번달 결제 현황</h2><span id="fx-month-label" style="font-size:12px;color:var(--mu)"></span></div>
-    <table>
-      <thead><tr><th>이름</th><th>카테고리</th><th>결제일</th><th style="text-align:right">금액</th><th>이번달 상태</th><th></th></tr></thead>
-      <tbody id="fx-table"></tbody>
-    </table>
-    <div class="empty" id="fx-empty">항목이 없습니다</div>
-  </div>
-  <div class="box">
-    <div class="box-hd"><h2>고정 지출 목록</h2></div>
+
+  <!-- 기존 고정 지출 목록 (결제일 순, 간단 카드) -->
+  <div class="box" id="fx-list-box" style="margin-top:14px;display:none">
+    <div class="box-hd"><h2>결제일 순 카드 보기</h2></div>
     <div class="box-bd"><div class="fl" id="fx-list"></div></div>
   </div>
+
+  <!-- 3일 내 예정 알림 (기존) -->
+  <div id="fx-alert" style="display:none"></div>
 </div>
 
 <!-- 통장&카드 관리 -->
@@ -1474,6 +1519,12 @@ function updSetting(key,val){
 // ── TX ──
 function scrollToTxList(){const t=Array.from(document.querySelectorAll('.nav-tab')).find(b=>b.textContent.includes('거래 내역'));if(t)P('tx',t);}
 function setAssetFilter(f,el){window._assetFilter=f;document.querySelectorAll('#asset-filter .tbtn').forEach(b=>b.classList.remove('active'));el.classList.add('active');render();}
+function openFixedForm(){
+  const box=document.getElementById('fx-form-box');
+  if(box) box.classList.remove('collapsed');
+  document.getElementById('fx-name')?.focus();
+  box?.scrollIntoView({behavior:'smooth',block:'center'});
+}
 function openAssetForm(type){
   const box=document.getElementById('asset-form-box');
   if(box) box.classList.remove('collapsed');
@@ -2563,7 +2614,7 @@ function render(){
   const ft=fixeds.reduce((s,f)=>s+f.amount,0);
   document.getElementById('fx-tot').textContent=fmt(ft);
   document.getElementById('fx-yr').textContent=fmt(ft*12);
-  document.getElementById('fx-cnt').textContent=fixeds.length+'개';
+  document.getElementById('fx-cnt').textContent=fixeds.length+'건';
   const fxLbl=document.getElementById('fx-month-label');
   if(fxLbl)fxLbl.textContent=`${hY}년 ${hM+1}월`;
 
@@ -2579,26 +2630,54 @@ function render(){
     } else alertEl.style.display='none';
   }
 
-  const stMap={'pending':'예정','done':'완료','skip':'건너뜀'};
-  const stColor={'pending':'var(--mu)','done':'var(--ic)','skip':'var(--ex)'};
+  const stMap={'pending':'예정','done':'자동 반영됨','skip':'건너뜀'};
+  const stColor={'pending':'#f59e0b','done':'var(--ac)','skip':'var(--mu)'};
+  const stBg={'pending':'rgba(245,158,11,.12)','done':'rgba(16,185,129,.12)','skip':'rgba(107,114,128,.12)'};
   document.getElementById('fx-empty').style.display=fixeds.length?'none':'block';
   document.getElementById('fx-table').innerHTML=[...fixeds].sort((a,b)=>a.day-b.day).map(f=>{
     const st=getFxStatus(f.id,ym);
-    return`<tr style="${st==='done'?'opacity:.6':''}${st==='skip'?'text-decoration:line-through;opacity:.4':''}">
-      <td>${f.name}</td>
-      <td><span class="bdg fixed-b">${f.cat}</span></td>
-      <td style="color:var(--mu);font-size:12px">매월 ${f.day}일</td>
-      <td style="text-align:right"><span style="color:#c084fc;font-weight:500">${fmt(f.amount)}</span></td>
-      <td>
-        <div style="display:flex;gap:4px">
-          <button onclick="setFxStatus(${f.id},'${ym}','pending')" style="padding:3px 8px;border-radius:5px;font-size:11px;border:1px solid var(--bd);cursor:pointer;font-family:var(--font);background:${st==='pending'?'var(--mu)':'var(--sf2)'};color:${st==='pending'?'#fff':'var(--mu)'}">예정</button>
-          <button onclick="setFxStatus(${f.id},'${ym}','done')" style="padding:3px 8px;border-radius:5px;font-size:11px;border:1px solid ${st==='done'?'var(--ic)':'var(--bd)'};cursor:pointer;font-family:var(--font);background:${st==='done'?'rgba(74,222,128,.15)':'var(--sf2)'};color:${st==='done'?'var(--ic)':'var(--mu)'}">✓ 완료</button>
-          <button onclick="setFxStatus(${f.id},'${ym}','skip')" style="padding:3px 8px;border-radius:5px;font-size:11px;border:1px solid ${st==='skip'?'var(--ex)':'var(--bd)'};cursor:pointer;font-family:var(--font);background:${st==='skip'?'rgba(248,113,113,.15)':'var(--sf2)'};color:${st==='skip'?'var(--ex)':'var(--mu)'}">건너뜀</button>
-        </div>
-      </td>
-      <td><button class="btn-del" onclick="delFixed(${f.id})">✕</button></td>
+    const acct=accounts.find(a=>String(a.id)===String(f.acctId));
+    const hasAuto=txs.some(t=>t.autoFromFx===f.id);
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><span style="background:${catColor(f.cat)}22;color:${catColor(f.cat)};width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${catIcon(f.cat)||'🔁'}</span><span>${f.name}</span></div></td>
+      <td><span style="background:${catColor(f.cat)}22;color:${catColor(f.cat)};padding:2px 7px;border-radius:4px;font-size:11px">${f.cat}</span></td>
+      <td style="color:var(--mu);font-size:12px">${f.day}일</td>
+      <td style="text-align:right;font-weight:600">${fmt(f.amount)}</td>
+      <td style="font-size:12px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:'-'}</td>
+      <td><span style="background:${stBg[st]};color:${stColor[st]};padding:3px 10px;border-radius:6px;font-size:11px;font-weight:500">${stMap[st]}</span></td>
+      <td><span style="font-size:11px;color:var(--mu)">${hasAuto?'자동':'수동'}</span></td>
+      <td><div style="display:flex;gap:3px"><button class="tbtn" onclick="setFxStatus(${f.id},'${ym}','done')">완료</button><button class="tbtn" onclick="setFxStatus(${f.id},'${ym}','skip')">건너뜀</button><button class="tbtn tbtn-del" onclick="delFixed(${f.id})">삭제</button></div></td>
     </tr>`;
   }).join('');
+
+  // 3일 내 예정 건수 카드
+  const fxUpEl=document.getElementById('fx-upcoming');
+  if(fxUpEl){
+    const upcoming=todayNum?fixeds.filter(f=>f.day>=todayNum&&f.day<=todayNum+3&&getFxStatus(f.id,ym)==='pending'):[];
+    const upAmt=upcoming.reduce((s,f)=>s+f.amount,0);
+    fxUpEl.textContent=upcoming.length?`${upcoming.length}건 / ${fmt(upAmt)}`:'0건';
+  }
+
+  // 3일 내 예정 목록
+  const fxUpListEl=document.getElementById('fx-upcoming-list');
+  if(fxUpListEl){
+    const next=todayNum?fixeds.filter(f=>f.day>=todayNum&&f.day<=todayNum+7&&getFxStatus(f.id,ym)==='pending').sort((a,b)=>a.day-b.day):[];
+    fxUpListEl.innerHTML=next.length?next.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)"><div style="background:${catColor(f.cat)}22;color:${catColor(f.cat)};width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${catIcon(f.cat)||'🔁'}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${f.name}</div><div style="font-size:11px;color:var(--mu)">${hY}.${pad(hM+1)}.${pad(f.day)}</div></div><div style="font-size:13px;font-weight:600;color:#f97316">${fmt(f.amount)}</div></div>`).join(''):'<div style="color:var(--mu);font-size:12px;text-align:center;padding:1rem">예정 없음</div>';
+  }
+
+  // 진행률 도넛
+  const fxProgEl=document.getElementById('fx-progress');
+  if(fxProgEl){
+    const done=fixeds.filter(f=>getFxStatus(f.id,ym)==='done').reduce((s,f)=>s+f.amount,0);
+    const pending=fixeds.filter(f=>getFxStatus(f.id,ym)==='pending').reduce((s,f)=>s+f.amount,0);
+    const total=done+pending;
+    const pct=total>0?Math.round(done/total*100):0;
+    const R=40, C=2*Math.PI*R;
+    const donePart=total>0?(done/total)*C:0;
+    const svg=`<svg viewBox="0 0 100 100" width="140" height="140" style="flex-shrink:0"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--sf2)" stroke-width="14"></circle><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--ac)" stroke-width="14" stroke-dasharray="${donePart} ${C-donePart}" transform="rotate(-90 50 50)" stroke-linecap="round"></circle><text x="50" y="55" text-anchor="middle" style="font-size:16px;font-weight:700;fill:var(--ac)">${pct}%</text></svg>`;
+    const info=`<div style="font-size:13px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ac)"></span>결제 완료 <b style="color:var(--tx);margin-left:6px">${fmt(done)}</b></div><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd)"></span>남은 예정 <b style="color:var(--tx);margin-left:6px">${fmt(pending)}</b></div></div>`;
+    fxProgEl.innerHTML=svg+info;
+  }
 
   document.getElementById('fx-list').innerHTML=fixeds.length?fixeds.map(f=>{
     const st=getFxStatus(f.id,ym);
