@@ -2393,19 +2393,20 @@ function render(){
   // 대시보드 렌더
   renderDashboard(ym, mTxs, mFix);
 
-  // 예산 현황 - 각 카테고리 앞에 아이콘 원
+  // 예산 현황 - 아이콘+이름+% 한 줄, 바/금액 아래
   document.getElementById('bgrid').innerHTML=txCats.map(cat=>{
     const b=budgets[cat]||0; if(!b)return'';
     const spent=mTxs.filter(t=>t.type==='expense'&&t.cat===cat).reduce((s,t)=>s+t.amount,0);
     const pct=Math.min(100,Math.round(spent/b*100));
     const barColor=pct>=100?'var(--ex)':pct>=80?'#f59e0b':catColor(cat);
-    return`<div style="display:flex;align-items:center;gap:12px;padding:8px 0">
-      <div style="background:${catColor(cat)}22;color:${catColor(cat)};width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${catIcon(cat)||'💸'}</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx);font-weight:500">${cat}</span><span style="color:${barColor};font-weight:600">${pct}%</span></div>
-        <div style="background:var(--sf2);height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="background:${barColor};height:100%;width:${pct}%;transition:width .3s"></div></div>
-        <div style="font-size:11px;color:var(--mu)">${fmt(spent)} / ${fmt(b)}</div>
+    return`<div style="padding:8px 0">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="background:${catColor(cat)}22;color:${catColor(cat)};width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${catIcon(cat)||'💸'}</div>
+        <span style="flex:1;font-size:13px;font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cat}</span>
+        <span style="font-size:13px;font-weight:600;color:${barColor}">${pct}%</span>
       </div>
+      <div style="background:var(--sf2);height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="background:${barColor};height:100%;width:${pct}%;transition:width .3s"></div></div>
+      <div style="font-size:11px;color:var(--mu)">${fmt(spent)} / ${fmt(b)}</div>
     </div>`;
   }).join('')||'<div style="color:var(--mu);font-size:13px">설정에서 예산을 입력하세요</div>';
 
