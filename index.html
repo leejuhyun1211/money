@@ -332,25 +332,37 @@ tr:hover td{background:var(--sf2);}
     <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
       <!-- 핵심 카드 2x2 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="card" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(16,185,129,.15);color:var(--ac);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">💳</span><div class="label">이번 달 남은 돈</div></div>
-          <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
-          <div id="d-left-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        <div class="card" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);display:flex;align-items:center;gap:14px">
+          <span style="background:rgba(16,185,129,.15);color:var(--ac);width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">💳</span>
+          <div style="flex:1;min-width:0">
+            <div class="label" style="margin-bottom:3px">이번 달 남은 돈</div>
+            <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
+            <div id="d-left-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+          </div>
         </div>
-        <div class="card" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(249,115,22,.15);color:#f97316;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">📅</span><div class="label">3일 내 예정 고정지출</div></div>
-          <div class="amount" id="d-upcoming" style="color:#f97316">₩0</div>
-          <div id="d-upcoming-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        <div class="card" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.25);display:flex;align-items:center;gap:14px">
+          <span style="background:rgba(249,115,22,.15);color:#f97316;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📅</span>
+          <div style="flex:1;min-width:0">
+            <div class="label" style="margin-bottom:3px">3일 내 예정 고정지출</div>
+            <div class="amount" id="d-upcoming" style="color:#f97316">₩0</div>
+            <div id="d-upcoming-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+          </div>
         </div>
-        <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><div id="d-budget-donut" style="width:40px;height:40px;flex-shrink:0"></div><div class="label">예산 사용률</div></div>
-          <div class="amount" id="d-budget-rate" style="color:#3b82f6">0%</div>
-          <div id="d-budget-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;gap:14px">
+          <div id="d-budget-donut" style="width:52px;height:52px;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div class="label" style="margin-bottom:3px">예산 사용률</div>
+            <div class="amount" id="d-budget-rate" style="color:#3b82f6">0%</div>
+            <div id="d-budget-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+          </div>
         </div>
-        <div class="card" style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(168,85,247,.15);color:#a855f7;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">💳</span><div class="label">카드 결제 예정</div></div>
-          <div class="amount" id="d-card" style="color:#a855f7">₩0</div>
-          <div id="d-card-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        <div class="card" style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25);display:flex;align-items:center;gap:14px">
+          <span style="background:rgba(168,85,247,.15);color:#a855f7;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">💳</span>
+          <div style="flex:1;min-width:0">
+            <div class="label" style="margin-bottom:3px">카드 결제 예정</div>
+            <div class="amount" id="d-card" style="color:#a855f7">₩0</div>
+            <div id="d-card-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+          </div>
         </div>
       </div>
 
@@ -1262,10 +1274,10 @@ function renderDashboard(ym,mTxs,mFix){
   // 예산 사용률 도넛
   const dbd=document.getElementById('d-budget-donut');
   if(dbd){
-    const R=16, C=2*Math.PI*R;
+    const R=22, C=2*Math.PI*R;
     const pct=Math.min(100,bRate);
     const len=(pct/100)*C;
-    dbd.innerHTML=`<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="${R}" fill="none" stroke="rgba(59,130,246,.15)" stroke-width="5"></circle><circle cx="20" cy="20" r="${R}" fill="none" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-dasharray="${len} ${C-len}" transform="rotate(-90 20 20)"></circle><text x="20" y="24" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#3b82f6">${bRate}%</text></svg>`;
+    dbd.innerHTML=`<svg viewBox="0 0 52 52" width="52" height="52"><circle cx="26" cy="26" r="${R}" fill="none" stroke="rgba(59,130,246,.15)" stroke-width="6"></circle><circle cx="26" cy="26" r="${R}" fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round" stroke-dasharray="${len} ${C-len}" transform="rotate(-90 26 26)"></circle><text x="26" y="30" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#3b82f6">${bRate}%</text></svg>`;
   }
   const overCat=txCats.filter(c=>c!=='저축').map(c=>({c,pct:budgets[c]?Math.round(mTxs.filter(t=>t.type==='expense'&&t.cat===c).reduce((s,t)=>s+t.amount,0)/budgets[c]*100):0})).sort((a,b)=>b.pct-a.pct)[0];
   const dbs=document.getElementById('d-budget-sub');
