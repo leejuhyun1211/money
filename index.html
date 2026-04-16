@@ -306,6 +306,7 @@ tr:hover td{background:var(--sf2);}
               <div class="field"><label>통장/카드</label><select id="f-acct"><option value="">없음</option></select></div>
               <div class="field"><label>날짜</label><input id="f-date" type="date"></div>
             </div>
+            <div class="field" style="margin-top:8px"><label>태그 (공백 구분)</label><input id="f-tags" placeholder="여행 데이트"></div>
           </div>
         </div>
       </div>
@@ -360,6 +361,9 @@ tr:hover td{background:var(--sf2);}
         <div class="field"><label>금액 이상</label>
           <input id="f-filter-min" type="number" placeholder="0" oninput="render()">
         </div>
+        <div class="field"><label>태그</label>
+          <input id="f-filter-tag" placeholder="태그 포함" oninput="render()">
+        </div>
       </div>
     </div>
     <!-- 요약 -->
@@ -406,6 +410,7 @@ tr:hover td{background:var(--sf2);}
           <div class="field"><label>유형</label><select id="c-type"><option value="expense">지출</option><option value="income">수입</option></select></div>
           <div class="field"><label>카테고리</label><select id="c-cat"></select></div>
           <div class="field"><label>통장/카드</label><select id="c-acct"><option value="">없음</option></select></div>
+          <div class="field"><label>태그</label><input id="c-tags" placeholder="여행 데이트"></div>
           <button class="btn btn-blue" onclick="addTx('c')">추가</button>
         </div>
       </div>
@@ -585,22 +590,34 @@ tr:hover td{background:var(--sf2);}
       <div class="box-hd"><h2>💸 이체</h2></div>
       <div class="box-bd">
         <div class="form-row">
-          <div class="field"><label>보내는 곳</label><select id="tr-from"></select></div>
+          <div class="field"><label>보내는 곳</label><select id="tr-from" onchange="renderTransferPreview()"></select></div>
           <div class="field" style="align-items:center;justify-content:center;flex:0;min-width:30px">
             <label style="opacity:0">→</label>
             <span style="font-size:20px;color:var(--mu)">→</span>
           </div>
-          <div class="field"><label>받는 곳</label><select id="tr-to"></select></div>
-          <div class="field"><label>금액</label><input id="tr-amt" type="number" placeholder="100000"></div>
+          <div class="field"><label>받는 곳</label><select id="tr-to" onchange="renderTransferPreview()"></select></div>
+          <div class="field"><label>금액</label><input id="tr-amt" type="number" placeholder="100000" oninput="renderTransferPreview()"></div>
           <div class="field"><label>날짜</label><input id="tr-date" type="date"></div>
+          <div class="field"><label>목적</label>
+            <select id="tr-purpose">
+              <option value="move">내 자산 이동</option>
+              <option value="saving">저축 이체</option>
+              <option value="card">카드값 납부</option>
+              <option value="debt">부채 상환</option>
+              <option value="shared">공유 통장 입금</option>
+              <option value="date">데이트 비용 정산</option>
+            </select>
+          </div>
           <div class="field"><label>메모 (선택)</label><input id="tr-memo" placeholder="이번달 데이트 비용"></div>
           <button class="btn btn-blue" onclick="doTransfer()">이체</button>
+        </div>
+        <div id="tr-preview" style="margin-top:10px;padding:10px 14px;background:var(--sf2);border-radius:8px;font-size:12px;color:var(--mu);display:none"></div>
         </div>
       </div>
     </div>
     <div class="box">
       <div class="box-hd"><h2>이체 내역</h2></div>
-      <table><thead><tr><th>날짜</th><th>보내는 곳</th><th>받는 곳</th><th>메모</th><th style="text-align:right">금액</th><th></th></tr></thead>
+      <table><thead><tr><th>날짜</th><th>보내는 곳</th><th>받는 곳</th><th>목적</th><th>메모</th><th style="text-align:right">금액</th><th></th></tr></thead>
       <tbody id="tr-body"></tbody></table>
       <div class="empty" id="tr-empty">이체 내역이 없습니다</div>
     </div>
@@ -688,6 +705,7 @@ tr:hover td{background:var(--sf2);}
         <div class="mf"><label>카테고리</label><select id="et-cat"></select></div>
       </div>
       <div class="mf"><label>통장</label><select id="et-acct"><option value="">없음</option></select></div>
+      <div class="mf"><label>태그 (공백 구분)</label><input id="et-tags" placeholder="여행 데이트"></div>
     </div>
     <div class="mft"><button class="btn-gh" onclick="closeTxModal()">취소</button><button class="btn btn-blue" onclick="saveTxEdit()">저장</button></div>
   </div>
@@ -964,6 +982,13 @@ function prevYmOf(ym){
   const [y,m]=ym.split('-').map(Number);
   return m===1 ? `${y-1}-12` : `${y}-${pad(m-1)}`;
 }
+function parseTags(s){return (s||'').trim().split(/[\s,]+/).filter(x=>x);}
+function fmtTags(a){return (a||[]).join(' ');}
+function goMonth(m){
+  hY=yY; hM=m-1;
+  const homeTab=document.querySelector('.nav-tab');
+  if(homeTab) P('home', homeTab);
+}
 
 const STORAGE_KEYS=['gb_txs','gb_assets','gb_fixeds','gb_accounts','gb_transfers','gb_fx_status','gb_txCats','gb_assetCats','gb_fixedCats','gb_budgets','gb_settings'];
 
@@ -1093,11 +1118,13 @@ function addTx(src){
   const cat=(d?document.getElementById('f-cat'):document.getElementById('c-cat')).value;
   const acctId=(d?document.getElementById('f-acct'):document.getElementById('c-acct')).value;
   const date=d?document.getElementById('f-date').value:selDate;
+  const tagsEl=d?document.getElementById('f-tags'):document.getElementById('c-tags');
+  const tags=parseTags(tagsEl?.value);
   if(!desc||!amt||amt<=0||!date)return;
-  txs.unshift({id:Date.now(),desc,amount:amt,type,cat,date,acctId});
+  txs.unshift({id:Date.now(),desc,amount:amt,type,cat,date,acctId,tags});
   save(); render();
-  if(d){document.getElementById('f-desc').value='';document.getElementById('f-amt').value='';}
-  else{document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';}
+  if(d){document.getElementById('f-desc').value='';document.getElementById('f-amt').value='';if(tagsEl)tagsEl.value='';}
+  else{document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';if(tagsEl)tagsEl.value='';}
 }
 function delTx(id){txs=txs.filter(t=>t.id!==id); save(); render();}
 function dupTx(id){
@@ -1182,22 +1209,47 @@ function addAccount(){
 }
 function delAccount(id){accounts=accounts.filter(a=>a.id!==id); save(); render();}
 
+const TRANSFER_PURPOSES={move:'내 자산 이동',saving:'저축 이체',card:'카드값 납부',debt:'부채 상환',shared:'공유 통장 입금',date:'데이트 정산'};
+
 function doTransfer(){
   const fromId=document.getElementById('tr-from').value;
   const toId=document.getElementById('tr-to').value;
   const amt=parseInt(document.getElementById('tr-amt').value);
   const date=document.getElementById('tr-date').value;
   const memo=document.getElementById('tr-memo').value.trim()||'이체';
+  const purpose=document.getElementById('tr-purpose').value||'move';
   if(!fromId||!toId||!amt||!date||fromId===toId)return;
   const id=Date.now();
   // 출금 거래 (보내는 통장)
   txs.unshift({id,desc:`이체 → ${accounts.find(a=>String(a.id)===toId)?.name||''}`,amount:amt,type:'expense',cat:'이체',date,acctId:fromId,transferId:id});
   // 입금 거래 (받는 통장)
   txs.unshift({id:id+1,desc:`이체 ← ${accounts.find(a=>String(a.id)===fromId)?.name||''}`,amount:amt,type:'income',cat:'이체',date,acctId:toId,transferId:id});
-  transfers.unshift({id,fromId,toId,amt,date,memo});
+  transfers.unshift({id,fromId,toId,amt,date,memo,purpose});
   save(); render();
   document.getElementById('tr-amt').value='';
   document.getElementById('tr-memo').value='';
+  renderTransferPreview();
+}
+
+function acctBal(acctId){
+  if(!acctId) return 0;
+  const a=accounts.find(x=>String(x.id)===String(acctId)); if(!a) return 0;
+  const ai=txs.filter(t=>String(t.acctId)===String(acctId)&&t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const ae=txs.filter(t=>String(t.acctId)===String(acctId)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  return a.init+ai-ae;
+}
+
+function renderTransferPreview(){
+  const el=document.getElementById('tr-preview'); if(!el) return;
+  const fromId=document.getElementById('tr-from')?.value;
+  const toId=document.getElementById('tr-to')?.value;
+  const amt=parseInt(document.getElementById('tr-amt')?.value)||0;
+  if(!fromId||!toId||!amt||fromId===toId){el.style.display='none';return;}
+  const from=accounts.find(a=>String(a.id)===String(fromId));
+  const to=accounts.find(a=>String(a.id)===String(toId));
+  const fromBal=acctBal(fromId), toBal=acctBal(toId);
+  el.style.display='block';
+  el.innerHTML=`💡 이체 후 예상 잔액 — <b>${from?.name}</b> ${fmt(fromBal-amt)} · <b>${to?.name}</b> ${fmt(toBal+amt)}`;
 }
 function delTransfer(id){
   transfers=transfers.filter(t=>t.id!==id);
@@ -1302,8 +1354,8 @@ function renderYearly(){
   document.getElementById('yr-bal').textContent=(yB<0?'-':'')+fmt(yB);
   const md=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>ymKey(t.date)===ym));return{i:mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),e:mt.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0)+(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0))};});
   const mx=Math.max(...md.map(d=>Math.max(d.i,d.e)),1);
-  document.getElementById('yr-chart').innerHTML=md.map((d,i)=>`<div class="ybg"><div class="ybs" style="height:100px"><div class="ybr" style="background:var(--ic);height:${Math.round(d.i/mx*100)}px"></div><div class="ybr" style="background:var(--ex);height:${Math.round(d.e/mx*100)}px"></div></div><div class="ybl">${i+1}월</div></div>`).join('');
-  const th=mos.map(m=>`<th>${m}월</th>`).join('');
+  document.getElementById('yr-chart').innerHTML=md.map((d,i)=>`<div class="ybg" style="cursor:pointer" onclick="goMonth(${i+1})" title="${i+1}월 거래내역 보기"><div class="ybs" style="height:100px"><div class="ybr" style="background:var(--ic);height:${Math.round(d.i/mx*100)}px"></div><div class="ybr" style="background:var(--ex);height:${Math.round(d.e/mx*100)}px"></div></div><div class="ybl">${i+1}월</div></div>`).join('');
+  const th=mos.map(m=>`<th style="cursor:pointer" onclick="goMonth(${m})" title="${m}월 거래내역 보기">${m}월</th>`).join('');
   let html=`<thead><tr><th>구분</th>${th}<th>합계</th></tr></thead><tbody>`;
   const row=(lbl,cls,fn)=>{const vs=mos.map(m=>fn(modeTxs(txs.filter(t=>ymKey(t.date)===`${yY}-${pad(m)}`))));const tot=vs.reduce((s,v)=>s+v,0);return`<tr class="${cls}"><td>${lbl}</td>${vs.map(v=>v===0?`<td class="zero">-</td>`:`<td class="${v>0?'pos':'neg'}">${v>0?'':'-'}${fmt(v)}</td>`).join('')}<td class="${tot>0?'pos':tot<0?'neg':'zero'}">${tot===0?'-':(tot>=0?'':'-')+fmt(tot)}</td></tr>`;};
   const netVs=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>ymKey(t.date)===ym));return mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)-mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)-(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0));});
@@ -1349,6 +1401,7 @@ function openTxModal(id){
   document.getElementById('et-cat').value=t.cat;
   document.getElementById('et-date').value=t.date;
   document.getElementById('et-acct').value=t.acctId||'';
+  document.getElementById('et-tags').value=fmtTags(t.tags);
   document.getElementById('edit-tx-modal').style.display='flex';
 }
 function closeTxModal(){document.getElementById('edit-tx-modal').style.display='none';editTxId=null;}
@@ -1361,6 +1414,7 @@ function saveTxEdit(){
   txs[i].cat=document.getElementById('et-cat').value;
   txs[i].date=document.getElementById('et-date').value;
   txs[i].acctId=document.getElementById('et-acct').value;
+  txs[i].tags=parseTags(document.getElementById('et-tags').value);
   save(); closeTxModal(); render();
 }
 
@@ -1475,6 +1529,7 @@ function render(){
   const filterCat=document.getElementById('f-filter-cat')?.value||'';
   const filterAcct=document.getElementById('f-filter-acct')?.value||'';
   const filterMin=parseInt(document.getElementById('f-filter-min')?.value)||0;
+  const filterTag=(document.getElementById('f-filter-tag')?.value||'').trim().toLowerCase();
 
   let rows=[];
   const filt=txFil==='all'?mTxs:mTxs.filter(t=>t.type===txFil);
@@ -1485,10 +1540,11 @@ function render(){
     });
   }
   // 필터 적용
-  if(searchQ) rows=rows.filter(t=>(t.desc||'').toLowerCase().includes(searchQ)||(t.cat||'').toLowerCase().includes(searchQ));
+  if(searchQ) rows=rows.filter(t=>(t.desc||'').toLowerCase().includes(searchQ)||(t.cat||'').toLowerCase().includes(searchQ)||(t.tags||[]).some(tg=>tg.toLowerCase().includes(searchQ)));
   if(filterCat) rows=rows.filter(t=>t.cat===filterCat);
   if(filterAcct) rows=rows.filter(t=>t.acctId===filterAcct);
   if(filterMin>0) rows=rows.filter(t=>t.amount>=filterMin);
+  if(filterTag) rows=rows.filter(t=>(t.tags||[]).some(tg=>tg.toLowerCase().includes(filterTag)));
   rows.sort((a,b)=>b.date.localeCompare(a.date));
 
   // 요약
@@ -1508,7 +1564,7 @@ function render(){
     const acct=accounts.find(a=>String(a.id)===String(t.acctId));
     return`<tr${t.isFixed?' style="opacity:.7"':''}>
       <td style="color:var(--mu);font-size:11px">${t.date}</td>
-      <td>${t.desc}${t.isFixed?` <span class="bdg auto">고정</span>`:''}</td>
+      <td>${t.desc}${t.isFixed?` <span class="bdg auto">고정</span>`:''}${(t.tags||[]).map(tg=>`<span style="background:rgba(168,85,247,.12);color:#c084fc;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">#${tg}</span>`).join('')}</td>
       <td><span style="background:var(--sf2);padding:2px 7px;border-radius:4px;font-size:11px">${t.cat}</span></td>
       <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
       <td style="font-size:11px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:''}</td>
@@ -1650,7 +1706,8 @@ function render(){
     trBody.innerHTML=transfers.map(t=>{
       const from=accounts.find(a=>String(a.id)===String(t.fromId));
       const to=accounts.find(a=>String(a.id)===String(t.toId));
-      return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${from?.name||'?'} <span style="color:var(--mu)">(${from?.include===false?'공유':'내 자산'})</span></td><td>${to?.name||'?'} <span style="color:var(--mu)">(${to?.include===false?'공유':'내 자산'})</span></td><td style="color:var(--mu);font-size:12px">${t.memo}</td><td style="text-align:right"><span style="color:var(--ac);font-weight:500">${fmt(t.amt)}</span></td><td><button class="btn-del" onclick="delTransfer(${t.id})">✕</button></td></tr>`;
+      const purposeLbl=TRANSFER_PURPOSES[t.purpose||'move']||'내 자산 이동';
+      return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${from?.name||'?'} <span style="color:var(--mu)">(${from?.include===false?'공유':'내 자산'})</span></td><td>${to?.name||'?'} <span style="color:var(--mu)">(${to?.include===false?'공유':'내 자산'})</span></td><td><span style="background:rgba(96,165,250,.12);color:var(--ac);padding:2px 7px;border-radius:4px;font-size:11px">${purposeLbl}</span></td><td style="color:var(--mu);font-size:12px">${t.memo}</td><td style="text-align:right"><span style="color:var(--ac);font-weight:500">${fmt(t.amt)}</span></td><td><button class="btn-del" onclick="delTransfer(${t.id})">✕</button></td></tr>`;
     }).join('');
   }
 
