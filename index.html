@@ -245,9 +245,10 @@ tr:hover td{background:var(--sf2);}
     <h2 id="h-title"></h2>
     <div style="width:100px"></div>
   </div>
-  <div class="cards">
+  <div class="cards" style="grid-template-columns:repeat(5,1fr)">
     <div class="card c-ic"><div class="label">수입</div><div class="amount" id="s-inc">₩0</div></div>
     <div class="card c-ex"><div class="label">지출</div><div class="amount" id="s-exp">₩0</div></div>
+    <div class="card c-sav"><div class="label">저축</div><div class="amount" id="s-sav">₩0</div></div>
     <div class="card c-pu"><div class="label">고정지출</div><div class="amount" id="s-fix">₩0</div></div>
     <div class="card c-bal"><div class="label">잔액</div><div class="amount" id="s-bal">₩0</div></div>
   </div>
@@ -1026,6 +1027,7 @@ function render(){
   const sav=mTxs.filter(t=>t.type==='expense'&&t.cat==='저축').reduce((s,t)=>s+t.amount,0);
   document.getElementById('s-inc').textContent=fmt(inc);
   document.getElementById('s-exp').textContent=fmt(exp);
+  document.getElementById('s-sav').textContent=fmt(sav);
   document.getElementById('s-fix').textContent=fmt(mFix);
   const bal=inc-exp-sav-mFix;
   document.getElementById('s-bal').textContent=(bal<0?'-':'')+fmt(bal);
