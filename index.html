@@ -166,7 +166,9 @@ tr:hover td{background:var(--sf2);}
 .mft{display:flex;gap:8px;justify-content:flex-end;padding:1rem 1.4rem;border-top:1px solid var(--bd);}
 .btn-gh{background:transparent;border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:8px 16px;font-family:var(--font);font-size:13px;cursor:pointer;}
 .btn-gh:hover{background:var(--sf2);}
-/* Login */
+.ac-tab{padding:8px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--sf);color:var(--mu);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+.ac-tab.active{background:var(--ac);border-color:var(--ac);color:#fff;}
+
 .login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
 .login-box{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:2.5rem;width:100%;max-width:380px;}
 .login-box h2{font-size:1.4rem;font-weight:700;margin-bottom:.4rem;}
@@ -519,73 +521,117 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 통장&카드 관리 -->
 <div class="page" id="page-accounts">
-  <div class="cards c3">
-    <div class="card c-as"><div class="label">총 통장 잔액</div><div class="amount" id="ac-tot">₩0</div></div>
-    <div class="card c-ic"><div class="label">이번달 입금</div><div class="amount" id="ac-inc">₩0</div></div>
-    <div class="card c-ex"><div class="label">이번달 출금</div><div class="amount" id="ac-exp">₩0</div></div>
+  <!-- 탭 전환 -->
+  <div style="display:flex;gap:6px;margin-bottom:1.2rem">
+    <button class="ac-tab active" id="act-bank" onclick="setAcTab('bank',this)">🏦 통장</button>
+    <button class="ac-tab" id="act-card" onclick="setAcTab('card',this)">💳 신용카드</button>
+    <button class="ac-tab" id="act-transfer" onclick="setAcTab('transfer',this)">💸 이체</button>
+    <button class="ac-tab" id="act-add" onclick="setAcTab('add',this)">＋ 추가</button>
   </div>
-  <div class="box">
-    <div class="box-hd"><h2>통장 / 카드 추가</h2></div>
-    <div class="box-bd">
-      <div class="form-row">
-        <div class="field"><label>이름</label><input id="ac-name" placeholder="국민은행 입출금"></div>
-        <div class="field"><label>번호 (선택)</label><input id="ac-num" placeholder="000-00-000000"></div>
-        <div class="field"><label>종류</label>
-          <select id="ac-actype">
-            <option value="bank">통장</option>
-            <option value="card">신용카드</option>
-          </select>
+
+  <!-- 통장 탭 -->
+  <div id="ac-panel-bank">
+    <div class="cards c3" style="margin-bottom:1rem">
+      <div class="card c-as"><div class="label">총 통장 잔액</div><div class="amount" id="ac-tot">₩0</div></div>
+      <div class="card c-ic"><div class="label">이번달 입금</div><div class="amount" id="ac-inc">₩0</div></div>
+      <div class="card c-ex"><div class="label">이번달 출금</div><div class="amount" id="ac-exp">₩0</div></div>
+    </div>
+    <div class="box">
+      <div class="box-hd"><h2>통장 목록</h2></div>
+      <div class="box-bd"><div class="acct-list" id="acct-list-bank"></div></div>
+    </div>
+    <div class="box">
+      <div class="box-hd"><h2>통장별 거래 내역</h2></div>
+      <div class="box-bd" style="padding-bottom:0">
+        <div class="field" style="max-width:200px;margin-bottom:1rem">
+          <label>통장 선택</label>
+          <select id="ac-filter" onchange="render()"></select>
         </div>
-        <div class="field"><label>은행/카드사</label><input id="ac-bank" placeholder="국민은행"></div>
-        <div class="field"><label>초기 잔액</label><input id="ac-init" type="number" placeholder="0"></div>
-        <div class="field"><label>자산 포함</label>
-          <select id="ac-include">
-            <option value="1">포함 (내 자산)</option>
-            <option value="0">제외 (공유/데이트 통장 등)</option>
-          </select>
-        </div>
-        <button class="btn btn-blue" onclick="addAccount()">추가</button>
       </div>
+      <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th style="text-align:right">금액</th><th></th></tr></thead>
+      <tbody id="ac-tx-body"></tbody></table>
+      <div class="empty" id="ac-tx-empty">거래 내역이 없습니다</div>
     </div>
   </div>
-  <div class="box">
-    <div class="box-hd"><h2>통장 / 카드 목록</h2></div>
-    <div class="box-bd"><div class="acct-list" id="acct-list"><div class="empty">통장 또는 카드를 추가해보세요</div></div></div>
-  </div>
-  <div class="box">
-    <div class="box-hd"><h2>💸 이체</h2></div>
-    <div class="box-bd">
-      <div class="form-row">
-        <div class="field"><label>보내는 곳</label><select id="tr-from"></select></div>
-        <div class="field" style="align-items:center;justify-content:center;flex:0;min-width:30px">
-          <label style="opacity:0">→</label>
-          <span style="font-size:20px;color:var(--mu)">→</span>
+
+  <!-- 신용카드 탭 -->
+  <div id="ac-panel-card" style="display:none">
+    <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:1rem">
+      <div class="card c-ex"><div class="label">이번달 카드 사용액</div><div class="amount" id="card-used">₩0</div></div>
+      <div class="card c-pu"><div class="label">전월 대비</div><div class="amount" id="card-diff">-</div></div>
+      <div class="card c-bal"><div class="label">카드 수</div><div class="amount" id="card-cnt">0개</div></div>
+    </div>
+    <div class="box">
+      <div class="box-hd"><h2>신용카드 목록</h2></div>
+      <div class="box-bd"><div class="acct-list" id="acct-list-card"></div></div>
+    </div>
+    <div class="box">
+      <div class="box-hd"><h2>카드별 거래 내역</h2></div>
+      <div class="box-bd" style="padding-bottom:0">
+        <div class="field" style="max-width:200px;margin-bottom:1rem">
+          <label>카드 선택</label>
+          <select id="card-filter" onchange="render()"></select>
         </div>
-        <div class="field"><label>받는 곳</label><select id="tr-to"></select></div>
-        <div class="field"><label>금액</label><input id="tr-amt" type="number" placeholder="100000"></div>
-        <div class="field"><label>날짜</label><input id="tr-date" type="date"></div>
-        <div class="field"><label>메모 (선택)</label><input id="tr-memo" placeholder="이번달 데이트 비용"></div>
-        <button class="btn btn-blue" onclick="doTransfer()">이체</button>
       </div>
+      <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th style="text-align:right">금액</th><th></th></tr></thead>
+      <tbody id="card-tx-body"></tbody></table>
+      <div class="empty" id="card-tx-empty">카드 거래 내역이 없습니다</div>
     </div>
   </div>
-  <div class="box">
-    <div class="box-hd"><h2>이체 내역</h2></div>
-    <table><thead><tr><th>날짜</th><th>보내는 곳</th><th>받는 곳</th><th>메모</th><th style="text-align:right">금액</th><th></th></tr></thead>
-    <tbody id="tr-body"></tbody></table>
-    <div class="empty" id="tr-empty">이체 내역이 없습니다</div>
-  </div>
-  <div class="box">
-    <div class="box-hd"><h2>통장/카드별 거래 내역</h2></div>
-    <div class="box-bd" style="padding-bottom:0">
-      <div class="field" style="max-width:200px;margin-bottom:1rem">
-        <label>통장/카드 선택</label>
-        <select id="ac-filter" onchange="render()"></select>
+
+  <!-- 이체 탭 -->
+  <div id="ac-panel-transfer" style="display:none">
+    <div class="box">
+      <div class="box-hd"><h2>💸 이체</h2></div>
+      <div class="box-bd">
+        <div class="form-row">
+          <div class="field"><label>보내는 곳</label><select id="tr-from"></select></div>
+          <div class="field" style="align-items:center;justify-content:center;flex:0;min-width:30px">
+            <label style="opacity:0">→</label>
+            <span style="font-size:20px;color:var(--mu)">→</span>
+          </div>
+          <div class="field"><label>받는 곳</label><select id="tr-to"></select></div>
+          <div class="field"><label>금액</label><input id="tr-amt" type="number" placeholder="100000"></div>
+          <div class="field"><label>날짜</label><input id="tr-date" type="date"></div>
+          <div class="field"><label>메모 (선택)</label><input id="tr-memo" placeholder="이번달 데이트 비용"></div>
+          <button class="btn btn-blue" onclick="doTransfer()">이체</button>
+        </div>
       </div>
     </div>
-    <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th style="text-align:right">금액</th><th></th></tr></thead>
-    <tbody id="ac-tx-body"></tbody></table>
-    <div class="empty" id="ac-tx-empty">거래 내역이 없습니다</div>
+    <div class="box">
+      <div class="box-hd"><h2>이체 내역</h2></div>
+      <table><thead><tr><th>날짜</th><th>보내는 곳</th><th>받는 곳</th><th>메모</th><th style="text-align:right">금액</th><th></th></tr></thead>
+      <tbody id="tr-body"></tbody></table>
+      <div class="empty" id="tr-empty">이체 내역이 없습니다</div>
+    </div>
+  </div>
+
+  <!-- 추가 탭 -->
+  <div id="ac-panel-add" style="display:none">
+    <div class="box">
+      <div class="box-hd"><h2>통장 / 카드 추가</h2></div>
+      <div class="box-bd">
+        <div class="form-row">
+          <div class="field"><label>이름</label><input id="ac-name" placeholder="국민은행 입출금"></div>
+          <div class="field"><label>번호 (선택)</label><input id="ac-num" placeholder="000-00-000000"></div>
+          <div class="field"><label>종류</label>
+            <select id="ac-actype">
+              <option value="bank">통장</option>
+              <option value="card">신용카드</option>
+            </select>
+          </div>
+          <div class="field"><label>은행/카드사</label><input id="ac-bank" placeholder="국민은행"></div>
+          <div class="field"><label>초기 잔액</label><input id="ac-init" type="number" placeholder="0"></div>
+          <div class="field"><label>자산 포함</label>
+            <select id="ac-include">
+              <option value="1">포함 (내 자산)</option>
+              <option value="0">제외 (공유/데이트 통장 등)</option>
+            </select>
+          </div>
+          <button class="btn btn-blue" onclick="addAccount()">추가</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -706,6 +752,17 @@ let txFil = 'all';
 let savOpen = false;
 let editTxId = null, editAId = null, editAcId = null;
 let qType = 'expense';
+let acTab = 'bank';
+function setAcTab(tab,el){
+  acTab=tab;
+  document.querySelectorAll('.ac-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  ['bank','card','transfer','add'].forEach(t=>{
+    const p=document.getElementById(`ac-panel-${t}`);
+    if(p)p.style.display=t===tab?'block':'none';
+  });
+  render();
+}
 
 // ── 빠른 등록 프리셋 ──
 const quickPresets=[
@@ -1466,65 +1523,107 @@ function render(){
     return`<div class="fi"><div class="f-nm">${f.name} ${stBadge}</div><div class="f-amt">${fmt(f.amount)}/월</div><div class="f-meta">${f.cat} · 매월 ${f.day}일</div><div class="ifoot"><button class="btn-del" onclick="delFixed(${f.id})">✕</button></div></div>`;
   }).join(''):'<div class="empty">고정 지출을 추가해보세요</div>';
 
-  // 통장 관리
+  // 통장&카드 — 탭별 분리 렌더
   const acYm=`${hY}-${pad(hM+1)}`;
-  const acInc=txs.filter(t=>t.date&&t.date.slice(0,7)===acYm&&t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const acExp=txs.filter(t=>t.date&&t.date.slice(0,7)===acYm&&t.type==='expense').reduce((s,t)=>s+t.amount,0)+mFix;
+  const modeAccts=isDate?accounts.filter(a=>a.include===false):accounts;
+  const bankAccts=modeAccts.filter(a=>a.actype!=='card');
+  const cardAccts2=modeAccts.filter(a=>a.actype==='card');
+
   // 이체 내역
   const trBody=document.getElementById('tr-body');
-  const trEmpty=document.getElementById('tr-empty');
   if(trBody){
-    trEmpty.style.display=transfers.length?'none':'block';
+    document.getElementById('tr-empty').style.display=transfers.length?'none':'block';
     trBody.innerHTML=transfers.map(t=>{
       const from=accounts.find(a=>String(a.id)===String(t.fromId));
       const to=accounts.find(a=>String(a.id)===String(t.toId));
-      return`<tr>
-        <td style="color:var(--mu);font-size:11px">${t.date}</td>
-        <td>${from?.name||'?'} <span style="color:var(--mu)">(${from?.include===false?'공유':'내 자산'})</span></td>
-        <td>${to?.name||'?'} <span style="color:var(--mu)">(${to?.include===false?'공유':'내 자산'})</span></td>
-        <td style="color:var(--mu);font-size:12px">${t.memo}</td>
-        <td style="text-align:right"><span style="color:var(--ac);font-weight:500">${fmt(t.amt)}</span></td>
-        <td><button class="btn-del" onclick="delTransfer(${t.id})">✕</button></td>
-      </tr>`;
+      return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${from?.name||'?'} <span style="color:var(--mu)">(${from?.include===false?'공유':'내 자산'})</span></td><td>${to?.name||'?'} <span style="color:var(--mu)">(${to?.include===false?'공유':'내 자산'})</span></td><td style="color:var(--mu);font-size:12px">${t.memo}</td><td style="text-align:right"><span style="color:var(--ac);font-weight:500">${fmt(t.amt)}</span></td><td><button class="btn-del" onclick="delTransfer(${t.id})">✕</button></td></tr>`;
     }).join('');
   }
-  // 통장 관리 — 모드별 필터
-  const modeAccts = isDate ? accounts.filter(a=>a.include===false) : accounts;
-  const modeTot = modeAccts.filter(a=>a.include!==false).reduce((s,a)=>{
-    const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((ss,t)=>ss+t.amount,0);
-    const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((ss,t)=>ss+t.amount,0);
-    return s+a.init+ai-ae;
-  },0);
-  document.getElementById('ac-tot').textContent=fmt(modeTot);
-  document.getElementById('ac-inc').textContent=fmt(acInc);
-  document.getElementById('ac-exp').textContent=fmt(acExp);
-  document.getElementById('acct-list').innerHTML=modeAccts.length?modeAccts.map(a=>{
-    const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((s,t)=>s+t.amount,0);
-    const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
-    const bal=a.init+ai-ae;
-    const excluded=a.include===false;
-    const isCard=a.actype==='card';
-    const typeIcon=isCard?'💳':'🏦';
-    const typeLabel=isCard?'신용카드':'통장';
-    return`<div class="acct-card${excluded?' excluded':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-        <div class="acct-bank">${typeIcon} ${a.bank||'은행/카드사'} · ${typeLabel}</div>
-        ${excluded?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:2px 6px;border-radius:4px">공유통장</span>`:''}
-      </div>
-      <div class="acct-name">${a.name}</div>
-      <div class="acct-num">${a.num||'번호 없음'}</div>
-      <div class="acct-bal" style="color:${excluded?'#c084fc':isCard?'var(--ex)':'var(--go)'}">${isCard&&bal>0?'-':''}${fmt(bal)}</div>
-      <div class="acct-detail"><span>입금 ${fmt(ai)}</span><span>출금 ${fmt(ae)}</span></div>
-      <div class="ifoot" style="margin-top:8px"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
-    </div>`;
-  }).join(''):'<div class="empty">이 모드에 해당하는 통장/카드가 없습니다</div>';
 
-  // 통장별 거래 내역도 모드 필터
-  const modeAcctIds=modeAccts.map(a=>String(a.id));
-  const acSel=document.getElementById('ac-filter').value;
-  const acTxsAll=acSel?txs.filter(t=>t.acctId===acSel):txs.filter(t=>!t.acctId||modeAcctIds.includes(t.acctId));
-  document.getElementById('ac-tx-empty').style.display=acTxsAll.length?'none':'block';
-  document.getElementById('ac-tx-body').innerHTML=acTxsAll.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td><td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></td></tr>`).join('');
+  // 통장 탭
+  const modeTot=bankAccts.filter(a=>a.include!==false).reduce((s,a)=>s+acctBalMap[a.id].bal,0);
+  const acInc=txs.filter(t=>t.date&&t.date.slice(0,7)===acYm&&t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const acExp=txs.filter(t=>t.date&&t.date.slice(0,7)===acYm&&t.type==='expense'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const acTotEl=document.getElementById('ac-tot');
+  if(acTotEl)acTotEl.textContent=fmt(modeTot);
+  const acIncEl=document.getElementById('ac-inc');
+  if(acIncEl)acIncEl.textContent=fmt(acInc);
+  const acExpEl=document.getElementById('ac-exp');
+  if(acExpEl)acExpEl.textContent=fmt(acExp);
+
+  const bankListEl=document.getElementById('acct-list-bank');
+  if(bankListEl){
+    bankListEl.innerHTML=bankAccts.length?bankAccts.map(a=>{
+      const bal=acctBalMap[a.id].bal;
+      const excluded=a.include===false;
+      return`<div class="acct-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+          <div class="acct-bank">🏦 ${a.bank||'은행'}</div>
+          ${excluded?'<span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:2px 6px;border-radius:4px">공유통장</span>':''}
+        </div>
+        <div class="acct-name">${a.name}</div>
+        <div class="acct-num">${a.num||'번호 없음'}</div>
+        <div class="acct-bal" style="color:${excluded?'#c084fc':bal>=0?'var(--go)':'var(--ex)'}">${bal<0?'-':''}${fmt(bal)}</div>
+        <div class="acct-detail"><span>입금 ${fmt(txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((s,t)=>s+t.amount,0))}</span><span>출금 ${fmt(txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0))}</span></div>
+        <div class="ifoot" style="margin-top:8px"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
+      </div>`;
+    }).join(''):'<div class="empty">통장을 추가해보세요</div>';
+  }
+
+  // 통장 거래 내역 필터
+  const bankIds=bankAccts.map(a=>String(a.id));
+  const acSel=document.getElementById('ac-filter')?.value||'';
+  const acTxsAll=acSel?txs.filter(t=>t.acctId===acSel&&!t.transferId):txs.filter(t=>bankIds.includes(t.acctId)&&!t.transferId);
+  const acTxBody=document.getElementById('ac-tx-body');
+  const acTxEmpty=document.getElementById('ac-tx-empty');
+  if(acTxBody){
+    acTxEmpty.style.display=acTxsAll.length?'none':'block';
+    acTxBody.innerHTML=acTxsAll.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td><td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></td></tr>`).join('');
+  }
+
+  // 신용카드 탭
+  const prevYm2=hM===0?`${hY-1}-${pad(12)}`:`${hY}-${pad(hM)}`;
+  const cardUsed=cardAccts2.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date?.slice(0,7)===acYm).reduce((ss,t)=>ss+t.amount,0),0);
+  const cardPrevUsed=cardAccts2.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date?.slice(0,7)===prevYm2).reduce((ss,t)=>ss+t.amount,0),0);
+  const cardDiff=cardPrevUsed>0?Math.round((cardUsed-cardPrevUsed)/cardPrevUsed*100):0;
+  const cuEl=document.getElementById('card-used');
+  if(cuEl)cuEl.textContent=fmt(cardUsed);
+  const cdEl=document.getElementById('card-diff');
+  if(cdEl){cdEl.textContent=cardPrevUsed>0?(cardDiff>=0?'+':'')+cardDiff+'%':'-';cdEl.style.color=cardDiff>0?'var(--ex)':cardDiff<0?'var(--ic)':'var(--mu)';}
+  const ccEl=document.getElementById('card-cnt');
+  if(ccEl)ccEl.textContent=cardAccts2.length+'개';
+
+  const cardListEl=document.getElementById('acct-list-card');
+  if(cardListEl){
+    cardListEl.innerHTML=cardAccts2.length?cardAccts2.map(a=>{
+      const thisMonthAmt=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&t.date?.slice(0,7)===acYm).reduce((s,t)=>s+t.amount,0);
+      const totalAmt=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+      return`<div class="acct-card" style="border-color:rgba(248,113,113,.2)">
+        <div class="acct-bank">💳 ${a.bank||'카드사'} · 신용카드</div>
+        <div class="acct-name">${a.name}</div>
+        <div class="acct-num">${a.num||'번호 없음'}</div>
+        <div style="margin-top:8px">
+          <div style="font-size:11px;color:var(--mu);margin-bottom:4px">이번달 사용액</div>
+          <div style="font-size:1.2rem;font-weight:700;color:var(--ex)">-${fmt(thisMonthAmt)}</div>
+        </div>
+        <div class="acct-detail" style="margin-top:6px"><span>누적 ${fmt(totalAmt)}</span></div>
+        <div class="ifoot" style="margin-top:8px"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
+      </div>`;
+    }).join(''):'<div class="empty">신용카드를 추가해보세요</div>';
+  }
+
+  // 카드 거래 내역
+  const cardIds=cardAccts2.map(a=>String(a.id));
+  const cf=document.getElementById('card-filter');
+  if(cf){const v=cf.value;cf.innerHTML='<option value="">전체 카드</option>'+cardAccts2.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');cf.value=v;}
+  const cfSel=document.getElementById('card-filter')?.value||'';
+  const cardTxs=cfSel?txs.filter(t=>t.acctId===cfSel):txs.filter(t=>cardIds.includes(t.acctId));
+  const ctBody=document.getElementById('card-tx-body');
+  const ctEmpty=document.getElementById('card-tx-empty');
+  if(ctBody){
+    ctEmpty.style.display=cardTxs.length?'none':'block';
+    ctBody.innerHTML=cardTxs.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td style="text-align:right"><span class="ae">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></td></tr>`).join('');
+  }
 
   // 설정
   document.getElementById('set-tx-cats').innerHTML=txCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('tx','${c}')">✕</button></span>`).join('');
