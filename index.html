@@ -117,6 +117,13 @@ tr:hover td{background:var(--sf2);}
   .fx-cards{grid-template-columns:repeat(2,1fr) !important;}
 }
 .tbtn.active{background:rgba(16,185,129,.1);color:var(--ac);border-color:var(--ac);}
+.afbtn{background:transparent;border:none;border-radius:6px;padding:6px 14px;font-size:12px;color:var(--mu);cursor:pointer;font-family:var(--font);font-weight:500;transition:all .15s;}
+.afbtn.active{background:var(--ac);color:#fff;}
+.asset-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .15s;}
+.asset-row:hover{background:var(--sf2);}
+.asset-row:last-child{border-bottom:none;}
+.asset-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.asset-bdg{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;}
 .dash-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
 .dash-card{transition:background .2s,border-color .2s;}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
@@ -661,36 +668,36 @@ tr:hover td{background:var(--sf2);}
     </div>
   </div>
 
-  <!-- 2열: 자산 목록 + 부채 목록 -->
-  <div class="as-row" style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+  <!-- 2열: 자산 목록(좌) + 부채+구성(우) -->
+  <div class="as-row" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-bottom:14px;align-items:flex-start">
     <div class="box" style="margin:0">
       <div class="box-hd" style="justify-content:space-between">
         <h2>자산 목록</h2>
         <button onclick="openAssetForm('asset')" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);font-weight:500">+ 자산 추가</button>
       </div>
       <div class="box-bd">
-        <div style="display:flex;gap:4px;margin-bottom:12px" id="asset-filter">
-          <button class="tbtn active" data-f="all" onclick="setAssetFilter('all',this)">전체</button>
-          <button class="tbtn" data-f="liquid" onclick="setAssetFilter('liquid',this)">유동자산</button>
-          <button class="tbtn" data-f="savings" onclick="setAssetFilter('savings',this)">예적금</button>
-          <button class="tbtn" data-f="invest" onclick="setAssetFilter('invest',this)">투자</button>
+        <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--sf2);border-radius:8px;padding:3px;width:fit-content" id="asset-filter">
+          <button class="afbtn active" data-f="all" onclick="setAssetFilter('all',this)">전체</button>
+          <button class="afbtn" data-f="liquid" onclick="setAssetFilter('liquid',this)">유동자산</button>
+          <button class="afbtn" data-f="savings" onclick="setAssetFilter('savings',this)">예적금</button>
+          <button class="afbtn" data-f="invest" onclick="setAssetFilter('invest',this)">투자</button>
         </div>
         <div id="asset-list"></div>
       </div>
     </div>
-    <div class="box" style="margin:0">
-      <div class="box-hd" style="justify-content:space-between">
-        <h2>부채 목록</h2>
-        <button onclick="openAssetForm('debt')" style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);font-weight:500">+ 부채 추가</button>
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div class="box" style="margin:0">
+        <div class="box-hd" style="justify-content:space-between">
+          <h2>부채 목록</h2>
+          <button onclick="openAssetForm('debt')" style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);font-weight:500">+ 부채 추가</button>
+        </div>
+        <div class="box-bd"><div id="debt-list"></div></div>
       </div>
-      <div class="box-bd"><div id="debt-list"></div></div>
+      <div class="box" style="margin:0">
+        <div class="box-hd"><h2>자산 구성</h2></div>
+        <div class="box-bd"><div id="a-composition" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"></div></div>
+      </div>
     </div>
-  </div>
-
-  <!-- 자산 구성 도넛 -->
-  <div class="box" style="margin:0">
-    <div class="box-hd"><h2>자산 구성</h2></div>
-    <div class="box-bd"><div id="a-composition" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center"></div></div>
   </div>
 
   <!-- 자산/부채 추가 폼 (접힘) -->
@@ -2605,22 +2612,40 @@ function render(){
 
     cashCard=`<div class="ai-card" style="border:1px solid rgba(96,165,250,.3)"><div class="a-lbl" style="color:var(--ac)">거래 내역 자동 합산</div><div class="a-nm">현금 잔액</div><div class="a-amt" style="color:${cashBal>=0?'var(--go)':'var(--ex)'}">${cashBal>=0?'':'-'}${fmt(cashBal)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">수입 ${fmt(tInc)} · 지출 ${fmt(tExpR)}</div></div>`;
     savCard=unmatched.length>0?`<div class="ai-card" style="border:1px solid rgba(74,222,128,.3);cursor:pointer" onclick="toggleSavPanel()"><div class="a-lbl" style="color:var(--ic)">거래 내역 자동 · 클릭해서 상세보기</div><div class="a-nm">적금 누적 (기타)</div><div class="a-amt" style="color:var(--ic)">${fmt(unmTot)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">총 ${unmatched.length}건</div></div>`:'';
-    acctCards=myAccts.filter(a=>a.actype!=='card').map(a=>`<div class="ai-card" style="border:1px solid rgba(251,191,36,.2)"><div class="a-lbl" style="color:var(--go)">통장 · ${a.bank||'은행'}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:${acctBalMap[a.id].bal>=0?'var(--go)':'var(--ex)'}">${acctBalMap[a.id].bal<0?'-':''}${fmt(acctBalMap[a.id].bal)}</div><div style="font-size:11px;color:var(--mu);margin-top:4px">${a.num||'계좌번호 없음'}</div><div class="ifoot"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div></div>`).join('');
+    // 통장 → 유동자산 리스트 행
+    acctCards=myAccts.filter(a=>a.actype!=='card').map(a=>{
+      const bal=acctBalMap[a.id].bal;
+      return`<div class="asset-row" onclick="openAcctModal(${a.id})">
+        <div class="asset-ico" style="background:rgba(16,185,129,.12);color:var(--ac)">🏦</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span>${a.name}</span><span class="asset-bdg" style="background:rgba(16,185,129,.12);color:var(--ac)">유동자산</span></div>
+          ${a.num?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${a.num}</div>`:''}
+        </div>
+        <div style="font-weight:700;color:${bal>=0?'var(--ac)':'var(--ex)'}">${bal<0?'-':''}${fmt(bal)}</div>
+        <span style="color:var(--mu);font-size:16px;margin-left:4px">›</span>
+      </div>`;
+    }).join('');
+    // 자산 (적금·투자 등) 리스트 행
     const merged=assets.filter(a=>a.type==='asset').map(a=>{const sv=sg[a.name]||0;return{...a,amount:a.amount+sv,sv};});
     astCards=merged.map(a=>{
-      const hasDates=a.start&&a.end;
-      let dateInfo='';
-      if(hasDates){
-        const s=new Date(a.start),e=new Date(a.end),n=new Date();
-        const total=e-s,elapsed=Math.min(Math.max(n-s,0),total);
-        const pct=Math.round(elapsed/total*100);
-        const dLeft=Math.max(0,Math.ceil((e-n)/(1000*60*60*24)));
-        const cls=pct>=100?'ov':pct>=80?'warn':'ok';
-        dateInfo=`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:4px"><span>${a.start}</span><span>${a.end}</span></div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--mu);margin-top:3px;display:flex;justify-content:space-between"><span style="color:${pct>=100?'var(--ic)':'var(--mu)'}">${pct}% 경과</span><span>${pct>=100?'만기 완료':'D-'+dLeft}</span></div>${a.monthly?`<div style="font-size:11px;color:var(--mu);margin-top:3px">월 납입 ${fmt(a.monthly)}</div>`:''}</div>`;
-      }
-      return`<div class="ai-card"><div class="a-lbl" style="color:${a.sv>0?'var(--ic)':'var(--mu)'}">${a.cat} · 자산${a.sv>0?' + 저축합산':''}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--go)">${fmt(a.amount)}</div>${a.sv>0?`<div style="font-size:11px;color:var(--mu);margin-top:4px">기본 ${fmt(a.amount-a.sv)} + 저축 ${fmt(a.sv)}</div>`:''}${dateInfo}<div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`;
+      const isSav=a.cat==='예금/적금';
+      const tagColor=isSav?'#ec4899':(['투자/주식','부동산','기타'].includes(a.cat)?'#3b82f6':'var(--ac)');
+      const tagBg=isSav?'rgba(236,72,153,.12)':(['투자/주식','부동산','기타'].includes(a.cat)?'rgba(59,130,246,.12)':'rgba(16,185,129,.12)');
+      const tagLabel=isSav?'예적금':(['투자/주식','부동산','기타'].includes(a.cat)?'투자':a.cat);
+      const icon=isSav?'🐷':(a.cat==='투자/주식'?'📈':a.cat==='부동산'?'🏠':'₿');
+      let sub='';
+      if(a.end) sub=`<div style="font-size:11px;color:var(--mu);margin-top:2px">${a.end} 만기${a.monthly?` · 월 ${fmt(a.monthly)}`:''}</div>`;
+      return`<div class="asset-row" onclick="openAssetModal(${a.id})">
+        <div class="asset-ico" style="background:${tagBg};color:${tagColor}">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span>${a.name}</span><span class="asset-bdg" style="background:${tagBg};color:${tagColor}">${tagLabel}</span></div>
+          ${sub}
+        </div>
+        <div style="font-weight:700;color:${tagColor}">${fmt(a.amount)}</div>
+        <span style="color:var(--mu);font-size:16px;margin-left:4px">›</span>
+      </div>`;
     }).join('');
-    dbtCards=assets.filter(a=>a.type==='debt').map(a=>`<div class="ai-card"><div class="a-lbl">${a.cat} · 부채</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--ex)">-${fmt(a.amount)}</div><div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`).join('');
+    dbtCards=''; // 부채는 별도 렌더 (debt-list)
 
   } else {
     // ── 데이트 통장 모드 ──
@@ -2651,20 +2676,30 @@ function render(){
   const savEl=document.getElementById('a-savings'); if(savEl) savEl.textContent=fmt(savingsTot);
   const invEl=document.getElementById('a-invest'); if(invEl) invEl.textContent=fmt(investTot);
 
-  // 자산 목록 필터 적용
+  // 자산 목록 필터 적용 (astCards는 이미 리스트 행 스타일로 만들어져 있음)
   const assetFilter=window._assetFilter||'all';
   let filtered='';
-  if(assetFilter==='all') filtered=cashCard+savCard+acctCards+astCards;
-  else if(assetFilter==='liquid') filtered=cashCard+acctCards;
-  else if(assetFilter==='savings') filtered=savCard+assets.filter(a=>a.type==='asset'&&a.cat==='예금/적금').map(a=>{const sv=sg[a.name]||0; const merged={...a,amount:a.amount+sv,sv}; return `<div class="ai-card"><div class="a-lbl" style="color:#ec4899">${merged.cat}</div><div class="a-nm">${merged.name}</div><div class="a-amt" style="color:#ec4899">${fmt(merged.amount)}</div><div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${merged.id})">✎</button><button class="btn-del" onclick="delAsset(${merged.id})">✕</button></div></div>`;}).join('');
-  else if(assetFilter==='invest') filtered=assets.filter(a=>a.type==='asset'&&['투자/주식','부동산','기타'].includes(a.cat)).map(a=>`<div class="ai-card"><div class="a-lbl" style="color:#3b82f6">${a.cat}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:#3b82f6">${fmt(a.amount)}</div><div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`).join('');
-  document.getElementById('asset-list').innerHTML=filtered||'<div class="empty" style="grid-column:1/-1;padding:1.5rem">자산이 없습니다</div>';
+  if(assetFilter==='all') filtered=acctCards+astCards;
+  else if(assetFilter==='liquid') filtered=acctCards;
+  else if(assetFilter==='savings') filtered=assets.filter(a=>a.type==='asset'&&a.cat==='예금/적금').map(a=>{const sv=sg[a.name]||0;const merged={...a,amount:a.amount+sv,sv};return `<div class="asset-row" onclick="openAssetModal(${merged.id})"><div class="asset-ico" style="background:rgba(236,72,153,.12);color:#ec4899">🐷</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span>${merged.name}</span><span class="asset-bdg" style="background:rgba(236,72,153,.12);color:#ec4899">예적금</span></div>${merged.end?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${merged.end} 만기</div>`:''}</div><div style="font-weight:700;color:#ec4899">${fmt(merged.amount)}</div><span style="color:var(--mu);font-size:16px;margin-left:4px">›</span></div>`;}).join('');
+  else if(assetFilter==='invest') filtered=assets.filter(a=>a.type==='asset'&&['투자/주식','부동산','기타'].includes(a.cat)).map(a=>{const icon=a.cat==='투자/주식'?'📈':a.cat==='부동산'?'🏠':'₿';return `<div class="asset-row" onclick="openAssetModal(${a.id})"><div class="asset-ico" style="background:rgba(59,130,246,.12);color:#3b82f6">${icon}</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span>${a.name}</span><span class="asset-bdg" style="background:rgba(59,130,246,.12);color:#3b82f6">투자</span></div></div><div style="font-weight:700;color:#3b82f6">${fmt(a.amount)}</div><span style="color:var(--mu);font-size:16px;margin-left:4px">›</span></div>`;}).join('');
+  document.getElementById('asset-list').innerHTML=filtered||'<div class="empty" style="padding:1.5rem">자산이 없습니다</div>';
 
   // 부채 목록
   const debtListEl=document.getElementById('debt-list');
   if(debtListEl){
     const debts=assets.filter(a=>a.type==='debt');
-    debtListEl.innerHTML=debts.length?debts.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)"><div style="background:rgba(249,115,22,.12);color:#f97316;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📋</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${a.name} <span style="background:rgba(249,115,22,.12);color:#f97316;padding:1px 6px;border-radius:4px;font-size:10px">부채</span></div>${a.end?`<div style="font-size:11px;color:var(--mu)">${a.end} 만기</div>`:''}</div><div style="font-weight:700;color:#f97316">${fmt(a.amount)}</div><button class="tbtn tbtn-del" onclick="delAsset(${a.id})" style="margin-left:6px">삭제</button></div>`).join(''):'<div class="empty" style="padding:1.5rem">부채가 없습니다</div>';
+    debtListEl.innerHTML=debts.length?debts.map(a=>{
+      const icon=a.cat==='대출'?'🎓':a.cat==='카드부채'?'💳':'📋';
+      return `<div class="asset-row" onclick="openAssetModal(${a.id})">
+        <div class="asset-ico" style="background:rgba(249,115,22,.12);color:#f97316">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span>${a.name}</span><span class="asset-bdg" style="background:rgba(249,115,22,.12);color:#f97316">부채</span></div>
+          ${a.end?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${a.end} 만기</div>`:''}
+        </div>
+        <div style="font-weight:700;color:#f97316">${fmt(a.amount)}</div>
+      </div>`;
+    }).join(''):'<div class="empty" style="padding:1.5rem">부채가 없습니다</div>';
   }
 
   // 월 납입 중
