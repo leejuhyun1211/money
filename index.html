@@ -1191,6 +1191,13 @@ function addTx(src){
   const tags=parseTags(tagsEl?.value);
   if(!desc||!amt||amt<=0||!date)return;
   txs.unshift({id:Date.now(),desc,amount:amt,type,cat,date,acctId,tags});
+  // 추가한 거래가 현재 보고 있는 월과 다르면 그 월로 이동
+  const txYm=ymKey(date);
+  const curYm=`${hY}-${pad(hM+1)}`;
+  if(txYm!==curYm){
+    const [y,m]=txYm.split('-').map(Number);
+    hY=y; hM=m-1;
+  }
   save(); render();
   if(d){document.getElementById('f-desc').value='';document.getElementById('f-amt').value='';if(tagsEl)tagsEl.value='';}
   else{document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';if(tagsEl)tagsEl.value='';}
