@@ -102,6 +102,10 @@ tr:hover td{background:var(--sf2);}
 .box:not(.collapsed) .box-hd .collapser{transform:rotate(90deg);}
 .af-chip{background:rgba(96,165,250,.15);color:var(--ac);padding:4px 10px;border-radius:12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
 .af-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.pg{background:var(--sf2);border:1px solid var(--bd);border-radius:6px;min-width:32px;height:32px;padding:0 8px;color:var(--mu);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s;}
+.pg:hover:not(:disabled):not(.active){background:rgba(16,185,129,.1);color:var(--ac);}
+.pg.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600;}
+.pg:disabled{opacity:.3;cursor:not-allowed;}
 @media(max-width:600px){.fab{bottom:16px;right:16px;width:52px;height:52px;}}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
@@ -387,41 +391,36 @@ tr:hover td{background:var(--sf2);}
   <!-- 전체 거래 내역 -->
   <div class="box">
     <div class="box-hd">
-      <h2>전체 거래 내역</h2>
+      <h2>거래 내역</h2>
       <label style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:4px;cursor:pointer">
         <input type="checkbox" id="show-fixed" checked onchange="render()" style="width:auto;padding:0">고정지출 표시
       </label>
     </div>
-    <!-- 검색 + 필터 -->
-    <div style="padding:12px 1.4rem;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;gap:8px">
-        <input id="tx-search" placeholder="🔍  내용, 카테고리 검색..." oninput="render()" style="flex:1">
-        <button onclick="toggleTxFilter()" id="tx-filter-btn" style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;color:var(--mu);font-size:12px;padding:8px 14px;cursor:pointer;white-space:nowrap;font-family:var(--font)">⚙ 필터</button>
+    <!-- 검색 + 필터 (인라인 고정) -->
+    <div style="padding:14px 1.4rem;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:10px">
+      <input id="tx-search" placeholder="🔍  내용 또는 메모 검색..." oninput="filterChanged()">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+        <div class="field"><label>카테고리</label>
+          <select id="f-filter-cat" onchange="filterChanged()"><option value="">전체</option></select>
+        </div>
+        <div class="field"><label>통장/카드</label>
+          <select id="f-filter-acct" onchange="filterChanged()"><option value="">전체</option></select>
+        </div>
+        <div class="field"><label>금액 이상</label>
+          <input id="f-filter-min" type="number" placeholder="0" oninput="filterChanged()">
+        </div>
+        <div class="field"><label>태그</label>
+          <input id="f-filter-tag" placeholder="태그 포함" oninput="filterChanged()">
+        </div>
       </div>
-      <!-- 유형 탭 -->
       <div class="ftabs">
         <button class="ftab active" onclick="setF('all',this)">전체</button>
         <button class="ftab" onclick="setF('income',this)">수입</button>
         <button class="ftab" onclick="setF('expense',this)">지출</button>
       </div>
-      <!-- 확장 필터 (접기/펼치기) -->
-      <div id="tx-filter-panel" style="display:none;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div class="field"><label>카테고리</label>
-          <select id="f-filter-cat" onchange="render()"><option value="">전체</option></select>
-        </div>
-        <div class="field"><label>통장/카드</label>
-          <select id="f-filter-acct" onchange="render()"><option value="">전체</option></select>
-        </div>
-        <div class="field"><label>금액 이상</label>
-          <input id="f-filter-min" type="number" placeholder="0" oninput="render()">
-        </div>
-        <div class="field"><label>태그</label>
-          <input id="f-filter-tag" placeholder="태그 포함" oninput="render()">
-        </div>
-      </div>
     </div>
-    <!-- 요약 -->
-    <div id="tx-summary" style="padding:10px 1.4rem;border-bottom:1px solid var(--bd);display:flex;gap:16px;font-size:12px;color:var(--mu);flex-wrap:wrap"></div>
+    <!-- 요약 카드 3개 -->
+    <div id="tx-summary-cards" style="padding:14px 1.4rem;border-bottom:1px solid var(--bd);display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"></div>
     <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th>통장/카드</th><th style="text-align:right">금액</th><th></th></tr></thead>
     <tbody id="tx-body"></tbody></table>
     <div class="empty" id="tx-empty">
@@ -429,6 +428,7 @@ tr:hover td{background:var(--sf2);}
       <div>아직 거래가 없어요</div>
       <div style="font-size:12px;color:var(--mu);margin-top:4px">위에서 첫 거래를 등록해보세요</div>
     </div>
+    <div id="tx-pagination" style="padding:14px 1.4rem;display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap"></div>
   </div>
 </div>
 
@@ -945,6 +945,10 @@ let cY = _now.getFullYear(), cM = _now.getMonth();
 let yY = _now.getFullYear();
 let selDate = null;
 let txFil = 'all';
+let txPage = 1;
+const TX_PAGE_SIZE = 10;
+function goPage(p){txPage=p; render(); document.getElementById('tx-pagination')?.scrollIntoView({behavior:'smooth',block:'center'});}
+function filterChanged(){txPage=1; render();}
 let savOpen = false;
 let editTxId = null, editAId = null, editAcId = null;
 let qType = 'expense';
@@ -1444,7 +1448,7 @@ function dupTx(id){
   txs.unshift(copy);
   save(); render();
 }
-function setF(m,el){txFil=m; document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); render();}
+function setF(m,el){txFil=m; document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); txPage=1; render();}
 
 let txFilterOpen=false;
 function toggleTxFilter(){
@@ -2028,23 +2032,57 @@ function render(){
   if(filterTag) rows=rows.filter(t=>(t.tags||[]).some(tg=>tg.toLowerCase().includes(filterTag)));
   rows.sort((a,b)=>b.date.localeCompare(a.date));
 
-  // 요약
-  const sumEl=document.getElementById('tx-summary');
-  if(sumEl){
-    const sumInc=rows.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  // 요약 카드 3개
+  const sumCardsEl=document.getElementById('tx-summary-cards');
+  if(sumCardsEl){
     const sumExp=rows.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-    const topCat=txCats.map(c=>({c,v:rows.filter(t=>t.cat===c).reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.v-a.v)[0];
-    sumEl.innerHTML=`<span>총 <b style="color:var(--tx)">${rows.length}건</b></span>`
-      +(sumInc?`<span>수입 <b style="color:var(--ic)">${fmt(sumInc)}</b></span>`:'')
-      +(sumExp?`<span>지출 <b style="color:var(--ex)">${fmt(sumExp)}</b></span>`:'')
-      +(topCat?.v?`<span>최다 <b style="color:var(--go)">${topCat.c}</b></span>`:'');
+    const expCount=rows.filter(t=>t.type==='expense').length;
+    const avgExp=expCount?Math.round(sumExp/expCount):0;
+    const topCat=txCats.map(c=>({c,v:rows.filter(t=>t.cat===c&&t.type==='expense').reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.v-a.v)[0];
+    sumCardsEl.innerHTML=`
+      <div style="background:var(--sf2);padding:12px 14px;border-radius:8px">
+        <div style="font-size:11px;color:var(--mu);margin-bottom:4px">조회 기간 총지출</div>
+        <div style="font-size:1.15rem;font-weight:700;color:var(--ex)">${fmt(sumExp)}</div>
+      </div>
+      <div style="background:var(--sf2);padding:12px 14px;border-radius:8px">
+        <div style="font-size:11px;color:var(--mu);margin-bottom:4px">평균 1회 지출</div>
+        <div style="font-size:1.15rem;font-weight:700;color:var(--tx)">${fmt(avgExp)}</div>
+      </div>
+      <div style="background:var(--sf2);padding:12px 14px;border-radius:8px">
+        <div style="font-size:11px;color:var(--mu);margin-bottom:4px">가장 많이 쓴 카테고리</div>
+        <div style="font-size:1.15rem;font-weight:700;color:var(--ac)">${topCat?.v?`${catIcon(topCat.c)} ${topCat.c}`:'-'}</div>
+      </div>`;
   }
 
   // 활성 필터 칩
   renderActiveFilters();
 
+  // 페이지네이션
+  const totalPages=Math.max(1, Math.ceil(rows.length/TX_PAGE_SIZE));
+  if(txPage>totalPages) txPage=totalPages;
+  if(txPage<1) txPage=1;
+  const pageRows=rows.slice((txPage-1)*TX_PAGE_SIZE, txPage*TX_PAGE_SIZE);
+  const pgEl=document.getElementById('tx-pagination');
+  if(pgEl){
+    if(totalPages<=1){pgEl.innerHTML='';}
+    else {
+      let pHtml=`<button class="pg" onclick="goPage(${txPage-1})" ${txPage===1?'disabled':''}>◀</button>`;
+      const pages=[];
+      for(let p=1;p<=totalPages;p++){
+        if(totalPages<=7 || p===1 || p===totalPages || Math.abs(p-txPage)<=1) pages.push(p);
+        else if(pages[pages.length-1]!=='…') pages.push('…');
+      }
+      pages.forEach(p=>{
+        if(p==='…') pHtml+=`<span style="color:var(--mu);padding:0 4px">…</span>`;
+        else pHtml+=`<button class="pg${p===txPage?' active':''}" onclick="goPage(${p})">${p}</button>`;
+      });
+      pHtml+=`<button class="pg" onclick="goPage(${txPage+1})" ${txPage===totalPages?'disabled':''}>▶</button>`;
+      pgEl.innerHTML=pHtml;
+    }
+  }
+
   document.getElementById('tx-empty').style.display=rows.length?'none':'block';
-  document.getElementById('tx-body').innerHTML=rows.map(t=>{
+  document.getElementById('tx-body').innerHTML=pageRows.map(t=>{
     const acct=accounts.find(a=>String(a.id)===String(t.acctId));
     return`<tr${t.isFixed?' style="opacity:.7"':''}>
       <td style="color:var(--mu);font-size:11px">${t.date}</td>
