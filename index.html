@@ -2740,11 +2740,12 @@ function render(){
   const mbox=document.getElementById('maturity-box');
   const mlist=document.getElementById('maturity-list');
   if(mbox&&mlist){
+    mbox.style.display='block';
     const now=new Date(); now.setHours(0,0,0,0);
     const upcoming=assets.filter(a=>a.end).map(a=>{
       const end=new Date(a.end);
       const dDays=Math.round((end-now)/(1000*60*60*24));
-      if(dDays<0||dDays>30) return null;
+      if(dDays<0) return null;
       let expected=a.amount;
       if(a.start&&a.monthly){
         const start=new Date(a.start);
@@ -2752,19 +2753,24 @@ function render(){
         expected=a.monthly*monthsTotal;
       }
       return{a,dDays,expected,end};
-    }).filter(Boolean).sort((a,b)=>a.dDays-b.dDays);
+    }).filter(Boolean).sort((a,b)=>a.dDays-b.dDays).slice(0,5);
     if(upcoming.length){
-      mbox.style.display='block';
       mlist.innerHTML=upcoming.map(({a,dDays,expected})=>{
-        const color=dDays<=7?'var(--ex)':dDays<=14?'var(--go)':'var(--ac)';
-        return`<div style="background:var(--sf2);border:1px solid ${color}55;border-radius:8px;padding:12px">
-          <div style="font-size:11px;color:${color};margin-bottom:4px">${dDays===0?'오늘 만기':'D-'+dDays} · ${a.end}</div>
-          <div style="font-size:14px;font-weight:600;margin-bottom:6px">${a.name}</div>
-          <div style="font-size:12px;color:var(--mu)">현재 ${fmt(a.amount)}${expected!==a.amount?` · 예상 <b style="color:var(--ic)">${fmt(expected)}</b>`:''}</div>
+        const months=Math.floor(dDays/30);
+        const dLabel=dDays===0?'오늘 만기':months>0?`${months}개월 남음`:`D-${dDays}`;
+        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid var(--bd)">
+          <div class="asset-ico" style="background:rgba(16,185,129,.12);color:var(--ac)">💰</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500">${a.name}</div>
+            <div style="font-size:11px;color:var(--mu);margin-top:2px">${a.end} 만기 (${dLabel})</div>
+          </div>
+          <div style="text-align:right">
+            ${expected!==a.amount?`<div style="font-size:10px;color:var(--mu)">예상 수령액</div><div style="font-weight:700;color:var(--ac)">${fmt(expected)}</div>`:`<div style="font-weight:700;color:var(--ac)">${fmt(a.amount)}</div>`}
+          </div>
         </div>`;
       }).join('');
     } else {
-      mbox.style.display='none';
+      mlist.innerHTML='<div class="empty" style="padding:1.5rem;font-size:12px">등록된 만기 예정 자산이 없습니다</div>';
     }
   }
   const sp=document.getElementById('sav-panel');
