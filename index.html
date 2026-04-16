@@ -110,7 +110,7 @@ tr:hover td{background:var(--sf2);}
 .pg.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600;}
 .pg:disabled{opacity:.3;cursor:not-allowed;}
 @media(max-width:600px){.fab{bottom:16px;right:16px;width:52px;height:52px;}}
-@media(max-width:900px){.dash-grid{grid-template-columns:1fr !important;}}
+@media(max-width:900px){.dash-grid,.cal-grid-split{grid-template-columns:1fr !important;}}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
 .ai-card,.fi{background:var(--sf2);border-radius:8px;padding:14px;}
@@ -484,43 +484,59 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 캘린더 -->
 <div class="page" id="page-calendar">
-  <div class="cal-nav">
-    <div class="cnb">
-      <button onclick="cMv(-1)">◀</button>
-      <button onclick="cMv(0)">오늘</button>
-      <button onclick="cMv(1)">▶</button>
+  <div style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.35rem;font-weight:700;margin:0 0 4px">캘린더 <span style="font-size:13px;font-weight:400;color:var(--mu);margin-left:8px">예정된 결제와 날짜별 거래를 한눈에 관리하세요.</span></h2>
+  </div>
+  <!-- 상단 3카드 -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(16,185,129,.12);color:var(--ac);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">💰</div>
+      <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">이달 수입</div><div id="cal-inc" style="font-size:1.2rem;font-weight:700;color:var(--ac)">₩0</div></div>
     </div>
-    <h2 id="cal-title"></h2>
-    <div style="width:80px"></div>
-  </div>
-  <div class="csum">
-    <div class="csc"><div class="label">이달 수입</div><div class="val" id="cal-inc" style="color:var(--ic)">₩0</div></div>
-    <div class="csc"><div class="label">이달 지출</div><div class="val" id="cal-exp" style="color:var(--ex)">₩0</div></div>
-    <div class="csc"><div class="label">이달 잔액</div><div class="val" id="cal-bal" style="color:var(--ac)">₩0</div></div>
-  </div>
-  <div class="box" style="overflow-x:auto">
-    <div id="cal-insight" style="padding:10px 14px;background:rgba(248,113,113,.08);border-radius:8px;font-size:13px;color:var(--ex);margin-bottom:10px;display:none"></div>
-    <div style="min-width:600px"><table class="cal-table" id="cal-grid"></table></div>
-  </div>
-  <div class="dpanel" id="day-panel" style="display:none">
-    <div class="dph">
-      <h3 id="dp-title">날짜</h3>
-      <button class="btn-del" onclick="closeDP()">✕</button>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(249,115,22,.12);color:#f97316;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📤</div>
+      <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">이달 지출</div><div id="cal-exp" style="font-size:1.2rem;font-weight:700;color:#f97316">₩0</div></div>
     </div>
-    <div class="dpb">
-      <div class="caform">
-        <div class="form-row">
-          <div class="field"><label>내용</label><input id="c-desc" placeholder="스타벅스"></div>
-          <div class="field"><label>금액</label><input id="c-amt" type="number" placeholder="5000"></div>
-          <div class="field"><label>유형</label><select id="c-type"><option value="expense">지출</option><option value="income">수입</option></select></div>
-          <div class="field"><label>카테고리</label><select id="c-cat"></select></div>
-          <div class="field"><label>통장/카드</label><select id="c-acct"><option value="">없음</option></select></div>
-          <div class="field"><label>태그</label><input id="c-tags" placeholder="여행 데이트"></div>
-          <button class="btn btn-blue" onclick="addTx('c')">추가</button>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(59,130,246,.12);color:#3b82f6;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">🧮</div>
+      <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">이달 잔액</div><div id="cal-bal" style="font-size:1.2rem;font-weight:700;color:#3b82f6">₩0</div></div>
+    </div>
+  </div>
+  <!-- 좌/우 분할 -->
+  <div class="cal-grid-split" style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:flex-start">
+    <!-- 좌측: 달력 -->
+    <div class="box" style="margin:0;overflow-x:auto">
+      <div class="box-hd" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="cMv(-1)" class="tbtn">◀</button>
+          <h3 id="cal-title" style="margin:0;font-size:15px;font-weight:700"></h3>
+          <button onclick="cMv(1)" class="tbtn">▶</button>
+          <button onclick="cMv(0)" class="tbtn" style="margin-left:8px">오늘</button>
         </div>
       </div>
-      <div id="dp-compare" style="padding:8px 14px;background:var(--sf2);border-radius:8px;font-size:12px;color:var(--mu);margin-bottom:10px;display:none"></div>
-      <div id="dp-list"></div>
+      <div style="padding:10px 1.2rem">
+        <div id="cal-insight" style="padding:10px 14px;background:rgba(239,68,68,.08);border-radius:8px;font-size:13px;color:var(--ex);margin-bottom:10px;display:none"></div>
+        <div style="min-width:600px"><table class="cal-table" id="cal-grid"></table></div>
+        <!-- 범례 -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--mu);align-items:center">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ac);margin-right:4px;vertical-align:middle"></span>수입</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px;vertical-align:middle"></span>식비</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#60a5fa;margin-right:4px;vertical-align:middle"></span>교통</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a855f7;margin-right:4px;vertical-align:middle"></span>쇼핑</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#c084fc;margin-right:4px;vertical-align:middle"></span>고정지출</span>
+          <span id="cal-over-warn" style="background:rgba(239,68,68,.12);color:var(--ex);padding:2px 8px;border-radius:8px;font-size:11px;display:none">⚠️ 예산 초과 주의</span>
+        </div>
+      </div>
+    </div>
+    <!-- 우측: 선택 날짜 상세 -->
+    <div class="box" id="day-panel" style="margin:0">
+      <div class="box-hd" style="justify-content:space-between">
+        <div id="dp-title" style="font-size:15px;font-weight:700">날짜를 선택하세요</div>
+        <span id="dp-today-badge" style="background:rgba(16,185,129,.15);color:var(--ac);padding:3px 10px;border-radius:10px;font-size:11px;display:none">오늘</span>
+      </div>
+      <div class="box-bd" id="day-panel-body">
+        <div style="text-align:center;color:var(--mu);font-size:13px;padding:2rem 0">← 달력에서 날짜를 클릭하면<br>해당 일 거래가 여기 표시됩니다.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -1386,22 +1402,9 @@ function addTxInline(){
 }
 
 function addTx(src){
-  // src='c': 캘린더 날짜 패널 추가 (src='h' 경로는 모달로 대체됨)
-  const desc=document.getElementById('c-desc').value.trim()||document.getElementById('c-cat').value;
-  const amt=parseInt(document.getElementById('c-amt').value);
-  const type=document.getElementById('c-type').value;
-  const cat=document.getElementById('c-cat').value;
-  const acctId=document.getElementById('c-acct').value;
-  const date=selDate;
-  const tags=parseTags(document.getElementById('c-tags')?.value);
-  if(!desc||!amt||amt<=0||!date)return;
-  txs.unshift({id:Date.now(),desc,amount:amt,type,cat,date,acctId,tags});
-  const txYm=ymKey(date);
-  const curYm=`${hY}-${pad(hM+1)}`;
-  if(txYm!==curYm){const [y,m]=txYm.split('-').map(Number);hY=y;hM=m-1;}
-  save(); render();
-  document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';
-  const tagsEl=document.getElementById('c-tags'); if(tagsEl)tagsEl.value='';
+  // 캘린더 인라인 폼이 제거됨 — openAddTxModal 사용
+  if(selDate) openAddTxModal(selDate);
+  else openAddTxModal();
 }
 
 // ── 빠른 거래 추가 모달 ──
@@ -1732,42 +1735,81 @@ function yMv(d){if(d===0)yY=_now.getFullYear();else yY+=d; render();}
 
 // ── CALENDAR ──
 function selectDay(ds){
-  if(selDate===ds){closeDP();return;}
-  selDate=ds;
-  const d=new Date(ds+'T00:00:00');
-  document.getElementById('dp-title').textContent=`${d.getMonth()+1}월 ${d.getDate()}일`;
-  document.getElementById('day-panel').style.display='block';
-  document.getElementById('day-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(selDate===ds){selDate=null;}
+  else{selDate=ds;}
   renderCal(); renderDP();
 }
-function closeDP(){selDate=null; document.getElementById('day-panel').style.display='none'; renderCal();}
+function closeDP(){selDate=null; renderCal(); renderDP();}
 
 function renderDP(){
-  if(!selDate)return;
+  const title=document.getElementById('dp-title');
+  const body=document.getElementById('day-panel-body');
+  const badge=document.getElementById('dp-today-badge');
+  if(!body) return;
+  if(!selDate){
+    if(title) title.textContent='날짜를 선택하세요';
+    if(badge) badge.style.display='none';
+    body.innerHTML='<div style="text-align:center;color:var(--mu);font-size:13px;padding:2rem 0">← 달력에서 날짜를 클릭하면<br>해당 일 거래가 여기 표시됩니다.</div>';
+    return;
+  }
   const d=new Date(selDate+'T00:00:00');
-  const dtxs=txs.filter(t=>t.date===selDate);
+  const days=['일','월','화','수','목','금','토'];
+  const isToday=selDate===fdStr(new Date());
+  if(title) title.textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  if(badge) badge.style.display=isToday?'inline-block':'none';
+
+  const dtxs=modeTxs(txs.filter(t=>t.date===selDate));
   const dfx=appMode==='date'?[]:fixeds.filter(f=>f.day===d.getDate());
-  const list=document.getElementById('dp-list');
+  const dayExp=dtxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)+dfx.reduce((s,f)=>s+f.amount,0);
+  const dayInc=dtxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+
   // 지난달 같은 날 비교
   const prev=new Date(d); prev.setMonth(prev.getMonth()-1);
   const prevStr=fdStr(prev);
-  const prevTxs=txs.filter(t=>t.date===prevStr);
-  const todayExp=dtxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)+dfx.reduce((s,f)=>s+f.amount,0);
-  const prevExp=prevTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const cmp=document.getElementById('dp-compare');
-  if(cmp){
-    if(prevExp>0||todayExp>0){
-      const diff=todayExp-prevExp;
-      const pct=prevExp>0?Math.round(diff/prevExp*100):null;
-      cmp.style.display='block';
-      cmp.innerHTML=`📊 오늘 지출 <b style="color:var(--tx)">${fmt(todayExp)}</b> · 지난달 ${prev.getMonth()+1}/${prev.getDate()} 지출 <b style="color:var(--tx)">${fmt(prevExp)}</b>${pct!==null?` (${diff>=0?'+':''}${pct}%)`:''}`;
-    } else cmp.style.display='none';
+  const prevExp=txs.filter(t=>t.date===prevStr&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+
+  // 예정 결제 (선택 날짜 이후 7일)
+  const nextFx=appMode==='date'?[]:fixeds.map(f=>{
+    const fd=new Date(d); fd.setDate(f.day);
+    if(fd<d) fd.setMonth(fd.getMonth()+1);
+    const diff=Math.round((fd-d)/(1000*60*60*24));
+    return{f,fd,diff};
+  }).filter(x=>x.diff>=0&&x.diff<=14).sort((a,b)=>a.diff-b.diff).slice(0,3);
+
+  // 오늘 남은 예산
+  const totalBudget=Object.entries(budgets).filter(([c])=>c!=='저축').reduce((s,[,v])=>s+v,0);
+  const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const dayBudget=totalBudget>0?Math.round(totalBudget/dim):0;
+
+  let html='';
+  html+=`<div style="font-size:12px;color:var(--mu);margin-bottom:4px">오늘 지출</div><div style="font-size:1.8rem;font-weight:700;color:var(--ex);margin-bottom:14px">${fmt(dayExp)}</div>`;
+  html+=`<button onclick="openAddTxModal('${selDate}')" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:11px;width:100%;font-family:var(--font);font-weight:600;cursor:pointer;margin-bottom:16px">➕ 거래 추가</button>`;
+
+  if(dtxs.length||dfx.length){
+    html+=`<div style="font-size:12px;color:var(--mu);margin-bottom:8px">거래 내역 (${dtxs.length+dfx.length})</div>`;
+    html+=dtxs.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)"><div style="background:${catColor(t.cat)}22;color:${catColor(t.cat)};width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${catIcon(t.cat)||'💸'}</div><div style="flex:1;min-width:0;font-size:13px">${t.desc}</div><div style="font-size:12px;font-weight:600;color:${t.type==='income'?'var(--ac)':'var(--ex)'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div></div>`).join('');
+    html+=dfx.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)"><div style="background:rgba(168,85,247,.12);color:#a855f7;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🔁</div><div style="flex:1;min-width:0;font-size:13px">${f.name} <span style="background:rgba(168,85,247,.12);color:#a855f7;padding:1px 6px;border-radius:4px;font-size:10px">고정</span></div><div style="font-size:12px;font-weight:600;color:#a855f7">-${fmt(f.amount)}</div></div>`).join('');
+  } else {
+    html+=`<div style="font-size:12px;color:var(--mu);padding:12px 0;text-align:center">거래 없음</div>`;
   }
-  if(!dtxs.length&&!dfx.length){list.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--mu);font-size:13px">거래가 없습니다. 위에서 추가하세요!</div>';return;}
-  list.innerHTML=[
-    ...dtxs.map(t=>`<div class="dti"><div class="dtl"><span class="dtn">${t.desc}</span><span class="dtc">${t.cat}</span></div><div class="dtr"><span class="${t.type==='income'?'ai':'ae'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></div></div>`),
-    ...dfx.map(f=>`<div class="dti"><div class="dtl"><span class="dtn">${f.name} <span class="bdg auto">고정</span></span><span class="dtc">${f.cat}</span></div><div class="dtr"><span style="color:#c084fc">-${fmt(f.amount)}</span></div></div>`)
-  ].join('');
+
+  if(nextFx.length){
+    html+=`<div style="font-size:12px;color:var(--mu);margin:16px 0 8px">예정 결제</div>`;
+    html+=nextFx.map(({f,fd,diff})=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)"><div style="background:rgba(249,115,22,.12);color:#f97316;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${fd.getMonth()+1}/${fd.getDate()}</div><div style="flex:1;min-width:0;font-size:13px">${f.name}</div><div style="font-size:12px;color:var(--mu)">${fmt(f.amount)}</div></div>`).join('');
+  }
+
+  if(isToday&&dayBudget>0){
+    const left=dayBudget-dayExp;
+    html+=`<div style="margin-top:16px;padding:10px 14px;background:rgba(16,185,129,.08);border-radius:8px;font-size:12px"><div style="color:var(--mu)">💡 오늘 남은 예산</div><div style="color:var(--ac);font-weight:700;font-size:15px;margin-top:2px">${fmt(left)}</div><div style="color:var(--mu);font-size:11px;margin-top:2px">하루 예산 ${fmt(dayBudget)} 기준</div></div>`;
+  }
+
+  if(prevExp>0){
+    const diff=dayExp-prevExp;
+    const pct=prevExp>0?Math.round(diff/prevExp*100):0;
+    html+=`<div style="margin-top:10px;padding:8px 12px;background:var(--sf2);border-radius:8px;font-size:11px;color:var(--mu)">📊 지난달 ${prev.getMonth()+1}/${prev.getDate()} 지출 ${fmt(prevExp)} <b>${diff>=0?'+':''}${pct}%</b></div>`;
+  }
+
+  body.innerHTML=html;
 }
 
 function renderCal(){
