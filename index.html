@@ -624,14 +624,14 @@ tr:hover td{background:var(--sf2);}
           <div class="field"><label>이름</label><input id="ac-name" placeholder="국민은행 입출금"></div>
           <div class="field"><label>번호 (선택)</label><input id="ac-num" placeholder="000-00-000000"></div>
           <div class="field"><label>종류</label>
-            <select id="ac-actype">
+            <select id="ac-actype" onchange="toggleAcctFields('add')">
               <option value="bank">통장</option>
               <option value="card">신용카드</option>
             </select>
           </div>
           <div class="field"><label>은행/카드사</label><input id="ac-bank" placeholder="국민은행"></div>
-          <div class="field"><label>초기 잔액</label><input id="ac-init" type="number" placeholder="0"></div>
-          <div class="field"><label>카드 결제일</label><input id="ac-payday" type="number" min="1" max="31" placeholder="25 (카드일 때만)"></div>
+          <div class="field" id="ac-init-field"><label>초기 잔액</label><input id="ac-init" type="number" placeholder="0"></div>
+          <div class="field" id="ac-payday-field" style="display:none"><label>카드 결제일</label><input id="ac-payday" type="number" min="1" max="31" placeholder="25"></div>
           <div class="field"><label>자산 포함</label>
             <select id="ac-include">
               <option value="1">포함 (내 자산)</option>
@@ -736,7 +736,7 @@ tr:hover td{background:var(--sf2);}
       <div class="mf"><label>이름</label><input id="eac-name"></div>
       <div class="mr">
         <div class="mf"><label>종류</label>
-          <select id="eac-actype">
+          <select id="eac-actype" onchange="toggleAcctFields('edit')">
             <option value="bank">통장</option>
             <option value="card">신용카드</option>
           </select>
@@ -745,9 +745,9 @@ tr:hover td{background:var(--sf2);}
       </div>
       <div class="mr">
         <div class="mf"><label>번호</label><input id="eac-num"></div>
-        <div class="mf"><label>초기 잔액</label><input id="eac-init" type="number"></div>
+        <div class="mf" id="eac-init-field"><label>초기 잔액</label><input id="eac-init" type="number"></div>
       </div>
-      <div class="mf"><label>카드 결제일 (신용카드일 때)</label><input id="eac-payday" type="number" min="1" max="31" placeholder="25"></div>
+      <div class="mf" id="eac-payday-field" style="display:none"><label>카드 결제일</label><input id="eac-payday" type="number" min="1" max="31" placeholder="25"></div>
       <div class="mf"><label>자산 포함</label>
         <select id="eac-include">
           <option value="1">포함 (내 자산)</option>
@@ -1397,13 +1397,22 @@ function setFxStatus(fxId,ym,st){
 }
 
 // ── ACCOUNTS ──
+function toggleAcctFields(mode){
+  const p=mode==='add'?'ac-':'eac-';
+  const actype=document.getElementById(p+'actype').value;
+  const isCard=actype==='card';
+  const initF=document.getElementById(p+'init-field');
+  const payF=document.getElementById(p+'payday-field');
+  if(initF) initF.style.display=isCard?'none':'';
+  if(payF) payF.style.display=isCard?'':'none';
+}
 function addAccount(){
   const name=document.getElementById('ac-name').value.trim();
   const num=document.getElementById('ac-num').value.trim();
   const actype=document.getElementById('ac-actype').value;
   const bank=document.getElementById('ac-bank').value.trim();
-  const init=parseInt(document.getElementById('ac-init').value)||0;
-  const payday=parseInt(document.getElementById('ac-payday').value)||0;
+  const init=actype==='card'?0:(parseInt(document.getElementById('ac-init').value)||0);
+  const payday=actype==='card'?(parseInt(document.getElementById('ac-payday').value)||0):0;
   const include=document.getElementById('ac-include').value==='1';
   if(!name)return;
   accounts.push({id:Date.now(),name,num,actype,bank,init,include,payday});
@@ -1411,6 +1420,7 @@ function addAccount(){
   ['ac-name','ac-num','ac-bank','ac-init','ac-payday'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('ac-include').value='1';
   document.getElementById('ac-actype').value='bank';
+  toggleAcctFields('add');
 }
 function delAccount(id){accounts=accounts.filter(a=>a.id!==id); save(); render();}
 
@@ -1786,6 +1796,7 @@ function openAcctModal(id){
   document.getElementById('eac-payday').value=a.payday||'';
   document.getElementById('eac-include').value=a.include===false?'0':'1';
   document.getElementById('eac-actype').value=a.actype||'bank';
+  toggleAcctFields('edit');
   document.getElementById('edit-acct-modal').style.display='flex';
 }
 function closeAcctModal(){document.getElementById('edit-acct-modal').style.display='none';editAcId=null;}
@@ -1795,10 +1806,10 @@ function saveAcctEdit(){
   accounts[i].name=document.getElementById('eac-name').value.trim();
   accounts[i].bank=document.getElementById('eac-bank').value.trim();
   accounts[i].num=document.getElementById('eac-num').value.trim();
-  accounts[i].init=parseInt(document.getElementById('eac-init').value)||0;
-  accounts[i].payday=parseInt(document.getElementById('eac-payday').value)||0;
-  accounts[i].include=document.getElementById('eac-include').value==='1';
   accounts[i].actype=document.getElementById('eac-actype').value;
+  accounts[i].init=accounts[i].actype==='card'?0:(parseInt(document.getElementById('eac-init').value)||0);
+  accounts[i].payday=accounts[i].actype==='card'?(parseInt(document.getElementById('eac-payday').value)||0):0;
+  accounts[i].include=document.getElementById('eac-include').value==='1';
   save(); closeAcctModal(); render();
 }
 
