@@ -649,13 +649,15 @@ tr:hover td{background:var(--sf2);}
     <div id="set-tx-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-tx-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('tx')"><button class="btn btn-blue btn-sm" onclick="addCat('tx')">+ 추가</button></div>
   </div>
-  <div class="ss"><h3>카테고리별 예산</h3><div class="bsl" id="set-budgets"></div></div>
+  <div class="ss"><h3>카테고리별 예산</h3>
+    <div id="set-budgets" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px"></div>
+  </div>
   <div class="ss"><h3>자산 종류</h3>
-    <div class="tl" id="set-asset-cats"></div>
+    <div id="set-asset-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-asset-cat" placeholder="새 종류" onkeydown="if(event.key==='Enter')addCat('asset')"><button class="btn btn-gold btn-sm" onclick="addCat('asset')">+ 추가</button></div>
   </div>
   <div class="ss"><h3>고정 지출 카테고리</h3>
-    <div class="tl" id="set-fixed-cats"></div>
+    <div id="set-fixed-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-fixed-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('fixed')"><button class="btn btn-pu btn-sm" onclick="addCat('fixed')">+ 추가</button></div>
   </div>
   <div class="ss"><h3>앱 설정</h3>
@@ -2219,9 +2221,9 @@ function render(){
       <button class="td" onclick="delCat('tx','${c}')">✕</button>
     </div>`;
   }).join('');
-  document.getElementById('set-budgets').innerHTML=txCats.map(cat=>`<div class="bsr"><span class="bn">${catIcon(cat)} ${cat}</span><input type="number" placeholder="예산" value="${budgets[cat]||''}" oninput="updBudget('${cat}',this.value)" style="flex:1"><span style="font-size:12px;color:var(--mu)">원/월</span></div>`).join('');
-  document.getElementById('set-asset-cats').innerHTML=assetCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('asset','${c}')">✕</button></span>`).join('');
-  document.getElementById('set-fixed-cats').innerHTML=fixedCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('fixed','${c}')">✕</button></span>`).join('');
+  document.getElementById('set-budgets').innerHTML=txCats.map(cat=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sf2);border-radius:6px"><span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${catIcon(cat)} ${cat}</span><input type="number" placeholder="예산" value="${budgets[cat]||''}" oninput="updBudget('${cat}',this.value)" style="width:90px;padding:4px 6px;font-size:12px"><span style="font-size:11px;color:var(--mu)">원/월</span></div>`).join('');
+  document.getElementById('set-asset-cats').innerHTML=assetCats.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sf2);border-radius:6px"><span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span><button class="td" onclick="delCat('asset','${c}')">✕</button></div>`).join('');
+  document.getElementById('set-fixed-cats').innerHTML=fixedCats.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sf2);border-radius:6px"><span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span><button class="td" onclick="delCat('fixed','${c}')">✕</button></div>`).join('');
   const smsEl=document.getElementById('set-month-start');
   if(smsEl) smsEl.value=settings.monthStartDay||1;
   const sdaEl=document.getElementById('set-default-acct');
