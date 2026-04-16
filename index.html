@@ -994,17 +994,21 @@ function modeAcctIds(){
   else return accounts.filter(a=>a.include===false).map(a=>String(a.id));
 }
 
-// 모드별 거래 필터 - 통장 없는 거래는 personal 모드에 포함
+// 모드별 거래 필터
+// 내 자산 모드: 내 통장 거래만 + 내→공유 / 공유→내 이체는 실제 지출/수입으로 포함
+// 데이트 모드: 공유 통장 거래만 (내 자산 간 이체는 제외)
 function modeTxs(list){
-  // 이체 거래는 양쪽에서 상쇄되므로 거래내역/요약에서 제외
-  const noTransfer=list.filter(t=>!t.transferId);
+  const dateIds=accounts.filter(a=>a.include===false).map(a=>String(a.id));
   if(appMode==='personal'){
-    const dateIds=accounts.filter(a=>a.include===false).map(a=>String(a.id));
-    return noTransfer.filter(t=>!dateIds.includes(t.acctId));
+    return list.filter(t=>{
+      if(dateIds.includes(String(t.acctId))) return false;
+      if(!t.transferId) return true;
+      const other=txs.find(x=>x.transferId===t.transferId&&x.id!==t.id);
+      return !!(other&&dateIds.includes(String(other.acctId)));
+    });
   } else {
-    const dateIds=accounts.filter(a=>a.include===false).map(a=>String(a.id));
     if(!dateIds.length) return [];
-    return noTransfer.filter(t=>dateIds.includes(t.acctId));
+    return list.filter(t=>dateIds.includes(String(t.acctId))&&!t.transferId);
   }
 }
 
