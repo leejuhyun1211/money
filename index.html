@@ -424,9 +424,12 @@ tr:hover td{background:var(--sf2);}
   </div>
 
   <!-- 검색 -->
-  <div style="position:relative;margin-bottom:12px">
-    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--mu)">🔍</span>
-    <input id="tx-search" placeholder="내용 또는 메모 검색" oninput="filterChanged()" style="padding-left:38px">
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="position:relative;flex:1">
+      <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--mu)">🔍</span>
+      <input id="tx-search" placeholder="내용 또는 메모 검색" oninput="filterChanged()" style="padding-left:38px" onkeydown="if(event.key==='Enter')filterChanged()">
+    </div>
+    <button onclick="filterChanged()" style="background:var(--ac);color:#fff;border:none;border-radius:8px;padding:0 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);white-space:nowrap">🔍 검색</button>
   </div>
 
   <!-- 필터 박스 -->
@@ -1981,7 +1984,7 @@ function hPickMonth(val){
   hY=parseInt(y); hM=parseInt(m);
   render();
 }
-function cMv(d){if(d===0){cY=_now.getFullYear();cM=_now.getMonth();selDate=null;}else{cM+=d;if(cM>11){cM=0;cY++;}else if(cM<0){cM=11;cY--;};selDate=null;} render();}
+function cMv(d){if(d===0){const n=new Date();cY=n.getFullYear();cM=n.getMonth();selDate=fdStr(n);}else{cM+=d;if(cM>11){cM=0;cY++;}else if(cM<0){cM=11;cY--;};selDate=null;} render();}
 function yMv(d){if(d===0)yY=_now.getFullYear();else yY+=d; render();}
 
 // ── CALENDAR ──
