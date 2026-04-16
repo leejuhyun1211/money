@@ -70,6 +70,14 @@ tr:hover td{background:var(--sf2);}
 .btn-edit{background:transparent;border:none;color:var(--mu);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;}
 .btn-edit:hover{color:var(--ac);}
 .empty{text-align:center;padding:2.5rem;color:var(--mu);font-size:13px;}
+.fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--ac);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 6px 18px rgba(96,165,250,.45);z-index:50;display:flex;align-items:center;justify-content:center;font-family:var(--font);transition:transform .15s;line-height:1;}
+.fab:hover{transform:scale(1.06);}
+.box.collapsed .box-bd{display:none;}
+.box-hd .collapser{display:inline-block;transition:transform .2s;font-size:10px;color:var(--mu);margin-right:6px;}
+.box:not(.collapsed) .box-hd .collapser{transform:rotate(90deg);}
+.af-chip{background:rgba(96,165,250,.15);color:var(--ac);padding:4px 10px;border-radius:12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
+.af-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:12px;padding:0;line-height:1;}
+@media(max-width:600px){.fab{bottom:16px;right:16px;width:52px;height:52px;}}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
 .ai-card,.fi{background:var(--sf2);border-radius:8px;padding:14px;}
@@ -285,51 +293,21 @@ tr:hover td{background:var(--sf2);}
     </div>
   </div>
 
-  <!-- 대시보드 2행: 빠른 입력 + 최근 5건 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
-    <!-- 빠른 거래 추가 -->
-    <div class="box" style="margin-bottom:0">
-      <div class="box-hd"><h2>⚡ 빠른 거래 추가</h2></div>
-      <div class="box-bd">
-        <!-- 빠른 등록 버튼 -->
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="quick-btns"></div>
-        <!-- 기본 입력 -->
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-          <div style="display:flex;gap:4px">
-            <button id="qt-exp" class="btn btn-blue btn-sm" onclick="setQType('expense')" style="min-width:54px">지출</button>
-            <button id="qt-inc" class="btn btn-sm" onclick="setQType('income')" style="background:var(--sf2);border:1px solid var(--bd);color:var(--mu);min-width:54px">수입</button>
-          </div>
-          <div class="field" style="flex:1;min-width:80px"><label>금액</label><input id="f-amt" type="number" placeholder="12,000"></div>
-          <div class="field" style="flex:1;min-width:90px"><label>카테고리</label><select id="f-cat"></select></div>
-          <button class="btn btn-blue" onclick="addTx('h')">추가</button>
-        </div>
-        <!-- 상세 펼치기 -->
-        <div style="margin-top:8px">
-          <button onclick="toggleDetail()" style="background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer;padding:0" id="detail-toggle-btn">▶ 상세 입력</button>
-          <div id="detail-fields" style="display:none;margin-top:10px">
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <div class="field"><label>내용</label><input id="f-desc" placeholder="스타벅스"></div>
-              <div class="field"><label>통장/카드</label><select id="f-acct"><option value="">없음</option></select></div>
-              <div class="field"><label>날짜</label><input id="f-date" type="date"></div>
-            </div>
-            <div class="field" style="margin-top:8px"><label>태그 (공백 구분)</label><input id="f-tags" placeholder="여행 데이트"></div>
-          </div>
-        </div>
-      </div>
+  <!-- 활성 필터 칩 -->
+  <div id="active-filters" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+  <!-- 대시보드 2행: 최근 거래 -->
+  <div class="box" style="margin-bottom:1rem">
+    <div class="box-hd">
+      <h2>최근 거래</h2>
+      <div style="font-size:12px;color:var(--mu)">오늘 남은 예산 <span id="d-today-left" style="color:var(--ac);font-weight:600">계산 중</span></div>
     </div>
-    <!-- 최근 5건 + 오늘 예산 -->
-    <div class="box" style="margin-bottom:0">
-      <div class="box-hd">
-        <h2>최근 거래</h2>
-        <div style="font-size:12px;color:var(--mu)">오늘 남은 예산 <span id="d-today-left" style="color:var(--ac);font-weight:600">계산 중</span></div>
-      </div>
-      <div id="recent-5" style="padding:0 1.4rem 1rem"></div>
-    </div>
+    <div id="recent-5" style="padding:0 1.4rem 1rem"></div>
   </div>
 
-  <!-- 대시보드 3행: 예산 현황 + 해석 -->
-  <div class="box" style="margin-bottom:1rem">
-    <div class="box-hd"><h2>카테고리별 예산</h2><button onclick="P('home-full',this)" style="background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer"></button></div>
+  <!-- 대시보드 3행: 예산 현황 (접기 가능, 기본 접힘) -->
+  <div class="box collapsed" id="bgrid-box" style="margin-bottom:1rem">
+    <div class="box-hd" onclick="document.getElementById('bgrid-box').classList.toggle('collapsed')" style="cursor:pointer"><h2><span class="collapser">▶</span> 카테고리별 예산</h2></div>
     <div class="box-bd">
       <div class="bg" id="bgrid"></div>
       <div id="d-insight" style="margin-top:12px;padding:10px 14px;background:rgba(96,165,250,.08);border-radius:8px;font-size:13px;color:var(--ac);display:none">💡 <span id="d-insight-txt"></span></div>
@@ -703,6 +681,7 @@ tr:hover td{background:var(--sf2);}
     <button class="btn btn-gh" onclick="doLogout()" style="font-size:13px">🚪 로그아웃</button>
   </div>
 </div>
+<button class="fab" onclick="fabAction()" title="추가">+</button>
 </div>
 
 <!-- 거래 수정 모달 -->
@@ -789,6 +768,41 @@ tr:hover td{background:var(--sf2);}
       <div class="mf"><label>내 통장에서 이체</label><select id="settle-from"></select></div>
     </div>
     <div class="mft"><button class="btn-gh" onclick="closeSettleModal()">취소</button><button class="btn btn-pu" onclick="confirmSettle()">이체 생성</button></div>
+  </div>
+</div>
+
+<!-- 빠른 거래 추가 모달 -->
+<div class="mov" id="add-tx-modal" style="display:none" onclick="if(event.target===this)closeAddTxModal()">
+  <div class="modal">
+    <div class="mhd"><h3>⚡ 빠른 거래 추가</h3><button class="btn-del" onclick="closeAddTxModal()">✕</button></div>
+    <div class="mbd">
+      <div class="mr">
+        <div class="mf"><label>유형</label>
+          <div style="display:flex;gap:4px">
+            <button type="button" id="at-exp" class="btn btn-blue btn-sm" onclick="setAddTxType('expense')" style="flex:1">지출</button>
+            <button type="button" id="at-inc" class="btn btn-sm" onclick="setAddTxType('income')" style="background:var(--sf2);border:1px solid var(--bd);color:var(--mu);flex:1">수입</button>
+          </div>
+        </div>
+        <div class="mf"><label>금액</label><input id="at-amt" type="number" placeholder="12,000"></div>
+      </div>
+      <div class="mr">
+        <div class="mf"><label>카테고리</label><select id="at-cat"></select></div>
+        <div class="mf"><label>날짜</label><input id="at-date" type="date"></div>
+      </div>
+      <div class="mf"><label>내용 (비우면 카테고리명 사용)</label><input id="at-desc" placeholder="스타벅스"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="at-presets"></div>
+      <button type="button" onclick="toggleAddTxDetail()" id="at-detail-btn" style="background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer;padding:0;margin-top:10px">▶ 상세</button>
+      <div id="at-detail" style="display:none;margin-top:8px">
+        <div class="mr">
+          <div class="mf"><label>통장/카드</label><select id="at-acct"><option value="">없음</option></select></div>
+          <div class="mf"><label>태그 (공백 구분)</label><input id="at-tags" placeholder="여행 데이트"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn-gh" onclick="closeAddTxModal()">취소</button>
+      <button class="btn btn-blue" onclick="submitAddTx()">추가</button>
+    </div>
   </div>
 </div>
 
@@ -1180,27 +1194,119 @@ function updSetting(key,val){
 
 // ── TX ──
 function addTx(src){
-  const d=src==='h';
-  const desc=(d?document.getElementById('f-desc'):document.getElementById('c-desc')).value.trim()||(d?document.getElementById('f-cat').value:document.getElementById('c-cat').value);
-  const amt=parseInt((d?document.getElementById('f-amt'):document.getElementById('c-amt')).value);
-  const type=d?qType:document.getElementById('c-type').value;
-  const cat=(d?document.getElementById('f-cat'):document.getElementById('c-cat')).value;
-  const acctId=(d?document.getElementById('f-acct'):document.getElementById('c-acct')).value;
-  const date=d?document.getElementById('f-date').value:selDate;
-  const tagsEl=d?document.getElementById('f-tags'):document.getElementById('c-tags');
-  const tags=parseTags(tagsEl?.value);
+  // src='c': 캘린더 날짜 패널 추가 (src='h' 경로는 모달로 대체됨)
+  const desc=document.getElementById('c-desc').value.trim()||document.getElementById('c-cat').value;
+  const amt=parseInt(document.getElementById('c-amt').value);
+  const type=document.getElementById('c-type').value;
+  const cat=document.getElementById('c-cat').value;
+  const acctId=document.getElementById('c-acct').value;
+  const date=selDate;
+  const tags=parseTags(document.getElementById('c-tags')?.value);
   if(!desc||!amt||amt<=0||!date)return;
   txs.unshift({id:Date.now(),desc,amount:amt,type,cat,date,acctId,tags});
-  // 추가한 거래가 현재 보고 있는 월과 다르면 그 월로 이동
   const txYm=ymKey(date);
   const curYm=`${hY}-${pad(hM+1)}`;
-  if(txYm!==curYm){
-    const [y,m]=txYm.split('-').map(Number);
-    hY=y; hM=m-1;
-  }
+  if(txYm!==curYm){const [y,m]=txYm.split('-').map(Number);hY=y;hM=m-1;}
   save(); render();
-  if(d){document.getElementById('f-desc').value='';document.getElementById('f-amt').value='';if(tagsEl)tagsEl.value='';}
-  else{document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';if(tagsEl)tagsEl.value='';}
+  document.getElementById('c-desc').value='';document.getElementById('c-amt').value='';
+  const tagsEl=document.getElementById('c-tags'); if(tagsEl)tagsEl.value='';
+}
+
+// ── 빠른 거래 추가 모달 ──
+let addTxType='expense';
+function openAddTxModal(prefillDate){
+  setAddTxType('expense');
+  refreshSelects();
+  fs('at-cat',txCats);
+  const acctOpts='<option value="">없음</option>'+accounts.map(a=>`<option value="${a.id}">${a.name}${a.include===false?' (공유)':''}</option>`).join('');
+  document.getElementById('at-acct').innerHTML=acctOpts;
+  if(settings.defaultAcctId&&accounts.find(a=>String(a.id)===String(settings.defaultAcctId))){
+    document.getElementById('at-acct').value=settings.defaultAcctId;
+  }
+  document.getElementById('at-date').value=prefillDate||fdStr(new Date());
+  ['at-amt','at-desc','at-tags'].forEach(i=>{const el=document.getElementById(i); if(el)el.value='';});
+  document.getElementById('at-presets').innerHTML=quickPresets.map(p=>`<button type="button" onclick='applyAddTxPreset(${JSON.stringify(p)})' style="background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;color:var(--tx);font-size:11px;cursor:pointer;font-family:var(--font)">${p.label}${p.amt?` <span style="color:var(--mu)">${fmt(p.amt)}</span>`:''}</button>`).join('');
+  document.getElementById('at-detail').style.display='none';
+  document.getElementById('at-detail-btn').textContent='▶ 상세';
+  document.getElementById('add-tx-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('at-amt').focus(),60);
+}
+function closeAddTxModal(){document.getElementById('add-tx-modal').style.display='none';}
+function setAddTxType(t){
+  addTxType=t;
+  const e=document.getElementById('at-exp'), i=document.getElementById('at-inc');
+  if(e)e.style.cssText=t==='expense'?'flex:1':'background:var(--sf2);border:1px solid var(--bd);color:var(--mu);flex:1';
+  if(i)i.style.cssText=t==='income'?'background:var(--ic);border:none;color:#111;flex:1':'background:var(--sf2);border:1px solid var(--bd);color:var(--mu);flex:1';
+}
+function applyAddTxPreset(p){
+  if(p.amt) document.getElementById('at-amt').value=p.amt;
+  const sel=document.getElementById('at-cat');
+  for(const o of sel.options)if(o.value===p.cat){sel.value=p.cat;break;}
+  if(!document.getElementById('at-desc').value) document.getElementById('at-desc').value=p.label;
+  document.getElementById('at-amt').focus();
+}
+function toggleAddTxDetail(){
+  const d=document.getElementById('at-detail'), b=document.getElementById('at-detail-btn');
+  const open=d.style.display==='none';
+  d.style.display=open?'block':'none';
+  b.textContent=(open?'▼':'▶')+' 상세';
+}
+function submitAddTx(){
+  const amt=parseInt(document.getElementById('at-amt').value);
+  const cat=document.getElementById('at-cat').value;
+  const date=document.getElementById('at-date').value;
+  const desc=document.getElementById('at-desc').value.trim()||cat;
+  const acctId=document.getElementById('at-acct').value;
+  const tags=parseTags(document.getElementById('at-tags').value);
+  if(!amt||amt<=0||!date){alert('금액과 날짜를 확인해주세요.');return;}
+  txs.unshift({id:Date.now(),desc,amount:amt,type:addTxType,cat,date,acctId,tags});
+  const txYm=ymKey(date);
+  const curYm=`${hY}-${pad(hM+1)}`;
+  if(txYm!==curYm){const [y,m]=txYm.split('-').map(Number);hY=y;hM=m-1;}
+  save(); closeAddTxModal(); render();
+}
+
+// ── 활성 필터 칩 ──
+function renderActiveFilters(){
+  const af=document.getElementById('active-filters'); if(!af) return;
+  const items=[];
+  const sq=(document.getElementById('tx-search')?.value||'').trim();
+  if(sq) items.push({t:`🔍 ${sq}`,clr:()=>{document.getElementById('tx-search').value='';}});
+  const fc=document.getElementById('f-filter-cat')?.value;
+  if(fc) items.push({t:`카테고리: ${fc}`,clr:()=>{document.getElementById('f-filter-cat').value='';}});
+  const fa=document.getElementById('f-filter-acct')?.value;
+  if(fa){const a=accounts.find(x=>String(x.id)===fa); items.push({t:`통장: ${a?.name||'?'}`,clr:()=>{document.getElementById('f-filter-acct').value='';}});}
+  const fm=parseInt(document.getElementById('f-filter-min')?.value)||0;
+  if(fm>0) items.push({t:`금액≥${fmt(fm)}`,clr:()=>{document.getElementById('f-filter-min').value='';}});
+  const ft=(document.getElementById('f-filter-tag')?.value||'').trim();
+  if(ft) items.push({t:`태그: ${ft}`,clr:()=>{document.getElementById('f-filter-tag').value='';}});
+  if(txFil!=='all') items.push({t:`유형: ${txFil==='income'?'수입':'지출'}`,clr:()=>{txFil='all';document.querySelectorAll('.ftab').forEach(e=>e.classList.remove('active'));document.querySelector('.ftab').classList.add('active');}});
+  if(!items.length){af.style.display='none';return;}
+  af.style.display='flex';
+  window._chipClr=items.map(x=>x.clr);
+  af.innerHTML=items.map((x,i)=>`<span class="af-chip">${x.t}<button onclick="_chipClr[${i}]();render()">✕</button></span>`).concat(`<button class="af-chip" style="background:var(--sf2);color:var(--mu);border:1px solid var(--bd);cursor:pointer" onclick="clearAllFilters()">모두 지우기</button>`).join('');
+}
+function clearAllFilters(){
+  ['tx-search','f-filter-cat','f-filter-acct','f-filter-min','f-filter-tag'].forEach(i=>{const el=document.getElementById(i); if(el)el.value='';});
+  txFil='all';
+  document.querySelectorAll('.ftab').forEach(e=>e.classList.remove('active'));
+  const first=document.querySelector('.ftab'); if(first) first.classList.add('active');
+  render();
+}
+
+// ── FAB ──
+function fabAction(){
+  const active=document.querySelector('.nav-tab.active')?.textContent||'';
+  if(active.includes('자산')){
+    const el=document.getElementById('a-name'); if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}
+  } else if(active.includes('고정')){
+    const el=document.getElementById('fx-name'); if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}
+  } else if(active.includes('통장')){
+    const addBtn=Array.from(document.querySelectorAll('.ac-tab')).find(b=>b.textContent.includes('추가'));
+    if(addBtn) addBtn.click();
+  } else {
+    openAddTxModal();
+  }
 }
 function delTx(id){txs=txs.filter(t=>t.id!==id); save(); render();}
 function dupTx(id){
@@ -1781,6 +1887,9 @@ function render(){
       +(topCat?.v?`<span>최다 <b style="color:var(--go)">${topCat.c}</b></span>`:'');
   }
 
+  // 활성 필터 칩
+  renderActiveFilters();
+
   document.getElementById('tx-empty').style.display=rows.length?'none':'block';
   document.getElementById('tx-body').innerHTML=rows.map(t=>{
     const acct=accounts.find(a=>String(a.id)===String(t.acctId));
@@ -2249,8 +2358,8 @@ function checkAuth(){
 
 checkAuth();
 
-document.getElementById('f-date').value=fdStr(_now);
-document.getElementById('tr-date').value=fdStr(_now);
+const trDateEl=document.getElementById('tr-date');
+if(trDateEl) trDateEl.value=fdStr(_now);
 render();
 </script>
 </body>
