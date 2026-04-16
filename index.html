@@ -102,6 +102,9 @@ tr:hover td{background:var(--sf2);}
 .box:not(.collapsed) .box-hd .collapser{transform:rotate(90deg);}
 .af-chip{background:rgba(96,165,250,.15);color:var(--ac);padding:4px 10px;border-radius:12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
 .af-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.tbtn{background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--mu);cursor:pointer;font-family:var(--font);margin-right:3px;transition:all .15s;}
+.tbtn:hover{background:rgba(16,185,129,.1);color:var(--ac);border-color:var(--ac);}
+.tbtn-del:hover{background:rgba(239,68,68,.1);color:var(--ex);border-color:var(--ex);}
 .pg{background:var(--sf2);border:1px solid var(--bd);border-radius:6px;min-width:32px;height:32px;padding:0 8px;color:var(--mu);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s;}
 .pg:hover:not(:disabled):not(.active){background:rgba(16,185,129,.1);color:var(--ac);}
 .pg.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600;}
@@ -280,6 +283,7 @@ tr:hover td{background:var(--sf2);}
   <h1>💰 <span>가계부</span></h1>
   <nav class="side-nav">
     <button class="nav-tab active" onclick="P('home',this)">📊 대시보드</button>
+    <button class="nav-tab" onclick="P('tx',this)">📝 거래 내역</button>
     <button class="nav-tab" onclick="P('calendar',this)">📅 캘린더</button>
     <button class="nav-tab" onclick="P('yearly',this)">📈 연간현황</button>
     <button class="nav-tab" onclick="P('assets',this)">💎 총 자산</button>
@@ -392,50 +396,89 @@ tr:hover td{background:var(--sf2);}
     </div>
   </div>
 
-  <!-- 활성 필터 칩 -->
-  <div id="active-filters" style="display:none;gap:6px;flex-wrap:wrap;margin:16px 0 12px"></div>
+</div>
 
-  <!-- 전체 거래 내역 -->
-  <div class="box">
-    <div class="box-hd">
-      <h2>거래 내역</h2>
-      <label style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:4px;cursor:pointer">
-        <input type="checkbox" id="show-fixed" checked onchange="render()" style="width:auto;padding:0">고정지출 표시
-      </label>
-    </div>
-    <!-- 검색 + 필터 (인라인 고정) -->
-    <div style="padding:14px 1.4rem;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:10px">
-      <input id="tx-search" placeholder="🔍  내용 또는 메모 검색..." oninput="filterChanged()">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
-        <div class="field"><label>카테고리</label>
-          <select id="f-filter-cat" onchange="filterChanged()"><option value="">전체</option></select>
-        </div>
-        <div class="field"><label>통장/카드</label>
-          <select id="f-filter-acct" onchange="filterChanged()"><option value="">전체</option></select>
-        </div>
-        <div class="field"><label>금액 이상</label>
-          <input id="f-filter-min" type="number" placeholder="0" oninput="filterChanged()">
-        </div>
-        <div class="field"><label>태그</label>
-          <input id="f-filter-tag" placeholder="태그 포함" oninput="filterChanged()">
-        </div>
+<!-- 거래 내역 -->
+<div class="page" id="page-tx">
+  <div style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.35rem;font-weight:700;margin:0 0 4px">거래 내역 <span style="font-size:13px;font-weight:400;color:var(--mu);margin-left:8px">검색과 필터로 원하는 거래를 쉽게 찾아보세요.</span></h2>
+  </div>
+
+  <!-- 검색 -->
+  <div style="position:relative;margin-bottom:12px">
+    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--mu)">🔍</span>
+    <input id="tx-search" placeholder="내용 또는 메모 검색" oninput="filterChanged()" style="padding-left:38px">
+  </div>
+
+  <!-- 필터 박스 -->
+  <div class="box" style="margin:0 0 12px;padding:14px 1.2rem">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      <div class="field"><label>기간</label>
+        <select id="f-filter-period" onchange="filterChanged()">
+          <option value="this">이번 달</option>
+          <option value="last">지난 달</option>
+          <option value="3m">최근 3개월</option>
+          <option value="6m">최근 6개월</option>
+          <option value="year">올해</option>
+          <option value="all">전체</option>
+        </select>
       </div>
-      <div class="ftabs">
+      <div class="field"><label>카테고리</label>
+        <select id="f-filter-cat" onchange="filterChanged()"><option value="">전체</option></select>
+      </div>
+      <div class="field"><label>통장/카드</label>
+        <select id="f-filter-acct" onchange="filterChanged()"><option value="">전체</option></select>
+      </div>
+      <div class="field"><label>태그</label>
+        <input id="f-filter-tag" placeholder="태그 포함" oninput="filterChanged()">
+      </div>
+      <div class="field"><label>금액 이상</label>
+        <input id="f-filter-min" type="number" placeholder="0" oninput="filterChanged()">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mu);cursor:pointer">
+        <input type="checkbox" id="f-fixed-only" onchange="filterChanged()" style="width:auto">고정지출만
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mu);cursor:pointer">
+        <input type="checkbox" id="f-no-transfer" onchange="filterChanged()" style="width:auto">이체 제외
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mu);cursor:pointer">
+        <input type="checkbox" id="show-fixed" checked onchange="render()" style="width:auto">고정지출 표시
+      </label>
+      <button onclick="clearAllFilters()" style="background:transparent;border:1px solid var(--bd);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--mu);cursor:pointer;margin-left:auto;font-family:var(--font)">⟳ 초기화</button>
+      <div class="ftabs" style="margin:0">
         <button class="ftab active" onclick="setF('all',this)">전체</button>
         <button class="ftab" onclick="setF('income',this)">수입</button>
         <button class="ftab" onclick="setF('expense',this)">지출</button>
       </div>
     </div>
-    <!-- 요약 카드 3개 -->
-    <div id="tx-summary-cards" style="padding:14px 1.4rem;border-bottom:1px solid var(--bd);display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"></div>
-    <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th>통장/카드</th><th style="text-align:right">금액</th><th></th></tr></thead>
+  </div>
+
+  <!-- 활성 필터 칩 -->
+  <div id="active-filters" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+  <!-- 요약 카드 3개 -->
+  <div id="tx-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px"></div>
+
+  <!-- 거래 테이블 -->
+  <div class="box" style="margin:0;overflow-x:auto">
+    <table><thead><tr><th>날짜</th><th>내용</th><th>카테고리</th><th>유형</th><th>통장/카드</th><th style="text-align:right">금액</th><th>관리</th></tr></thead>
     <tbody id="tx-body"></tbody></table>
     <div class="empty" id="tx-empty">
       <div style="font-size:2rem;margin-bottom:8px">📭</div>
-      <div>아직 거래가 없어요</div>
-      <div style="font-size:12px;color:var(--mu);margin-top:4px">위에서 첫 거래를 등록해보세요</div>
+      <div>조건에 맞는 거래가 없어요</div>
     </div>
-    <div id="tx-pagination" style="padding:14px 1.4rem;display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap"></div>
+    <!-- 페이지네이션 바 -->
+    <div style="padding:14px 1.4rem;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--bd)">
+      <select id="tx-page-size" onchange="TX_PAGE_SIZE=parseInt(this.value);txPage=1;render()" style="max-width:120px">
+        <option value="10">10개씩</option>
+        <option value="20">20개씩</option>
+        <option value="50">50개씩</option>
+      </select>
+      <div id="tx-pagination" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"></div>
+      <div id="tx-total" style="font-size:12px;color:var(--mu)">전체 0건</div>
+    </div>
   </div>
 </div>
 
@@ -962,7 +1005,7 @@ let yY = _now.getFullYear();
 let selDate = null;
 let txFil = 'all';
 let txPage = 1;
-const TX_PAGE_SIZE = 10;
+let TX_PAGE_SIZE = 10;
 function goPage(p){txPage=p; render(); document.getElementById('tx-pagination')?.scrollIntoView({behavior:'smooth',block:'center'});}
 function filterChanged(){txPage=1; render();}
 let savOpen = false;
@@ -1326,7 +1369,7 @@ function updSetting(key,val){
 }
 
 // ── TX ──
-function scrollToTxList(){document.querySelector('#page-home .box:has(#tx-body)')?.scrollIntoView({behavior:'smooth',block:'start'});}
+function scrollToTxList(){const t=Array.from(document.querySelectorAll('.nav-tab')).find(b=>b.textContent.includes('거래 내역'));if(t)P('tx',t);}
 function addTxInline(){
   const amt=parseInt(document.getElementById('f-amt').value);
   const cat=document.getElementById('f-cat').value;
@@ -2045,20 +2088,32 @@ function render(){
     return`<div class="bi"><div class="cat">${catIcon(cat)} ${cat}</div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div class="bnum"><span class="sp">${fmt(spent)}</span><span>/ ${fmt(b)} (${pct}%)</span></div></div>`;
   }).join('')||'<div style="color:var(--mu);font-size:13px">설정에서 예산을 입력하세요</div>';
 
-  // 거래 내역 테이블 (검색 + 필터 적용)
-  const showFixed=document.getElementById('show-fixed').checked;
+  // 거래 내역 테이블 (기간 + 검색 + 필터)
+  const showFixed=document.getElementById('show-fixed')?.checked!==false;
   const searchQ=(document.getElementById('tx-search')?.value||'').trim().toLowerCase();
+  const filterPeriod=document.getElementById('f-filter-period')?.value||'this';
   const filterCat=document.getElementById('f-filter-cat')?.value||'';
   const filterAcct=document.getElementById('f-filter-acct')?.value||'';
   const filterMin=parseInt(document.getElementById('f-filter-min')?.value)||0;
   const filterTag=(document.getElementById('f-filter-tag')?.value||'').trim().toLowerCase();
+  const fOnlyFix=document.getElementById('f-fixed-only')?.checked;
+  const fNoTransfer=document.getElementById('f-no-transfer')?.checked;
+
+  // 기간에 따른 txs 선택
+  let periodTxs;
+  if(filterPeriod==='this') periodTxs=txs.filter(t=>ymKey(t.date)===ym);
+  else if(filterPeriod==='last') periodTxs=txs.filter(t=>ymKey(t.date)===prevYmOf(ym));
+  else if(filterPeriod==='3m'){const c=new Date();c.setMonth(c.getMonth()-3);const cs=fdStr(c);periodTxs=txs.filter(t=>t.date>=cs);}
+  else if(filterPeriod==='6m'){const c=new Date();c.setMonth(c.getMonth()-6);const cs=fdStr(c);periodTxs=txs.filter(t=>t.date>=cs);}
+  else if(filterPeriod==='year') periodTxs=txs.filter(t=>t.date&&t.date.startsWith(String(hY)));
+  else periodTxs=txs.slice();
+  const periodMTxs=modeTxs(periodTxs);
 
   let rows=[];
-  const filt=txFil==='all'?mTxs:mTxs.filter(t=>t.type===txFil);
+  const filt=txFil==='all'?periodMTxs:periodMTxs.filter(t=>t.type===txFil);
   filt.forEach(t=>rows.push({...t,isFixed:false}));
-  if(!isDate&&showFixed&&txFil!=='income'){
+  if(!isDate&&showFixed&&txFil!=='income'&&filterPeriod==='this'){
     fixeds.forEach(f=>{
-      // 이미 자동 반영된 거래가 있으면 가상 row 생략
       if(txs.some(t=>t.autoFromFx===f.id&&t.fxYm===ym)) return;
       rows.push({id:f.id,desc:f.name,amount:f.amount,type:'expense',cat:f.cat,date:fixedDateStr(ym,f.day),isFixed:true,acctId:''});
     });
@@ -2069,27 +2124,33 @@ function render(){
   if(filterAcct) rows=rows.filter(t=>t.acctId===filterAcct);
   if(filterMin>0) rows=rows.filter(t=>t.amount>=filterMin);
   if(filterTag) rows=rows.filter(t=>(t.tags||[]).some(tg=>tg.toLowerCase().includes(filterTag)));
+  if(fOnlyFix) rows=rows.filter(t=>t.isFixed||t.autoFromFx);
+  if(fNoTransfer) rows=rows.filter(t=>!t.transferId);
   rows.sort((a,b)=>b.date.localeCompare(a.date));
 
-  // 요약 카드 3개
+  const totalEl=document.getElementById('tx-total');
+  if(totalEl) totalEl.textContent=`전체 ${rows.length}건`;
+
+  // 요약 카드 3개 (아이콘 원 배경)
   const sumCardsEl=document.getElementById('tx-summary-cards');
   if(sumCardsEl){
     const sumExp=rows.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const expCount=rows.filter(t=>t.type==='expense').length;
     const avgExp=expCount?Math.round(sumExp/expCount):0;
     const topCat=txCats.map(c=>({c,v:rows.filter(t=>t.cat===c&&t.type==='expense').reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.v-a.v)[0];
+    const topPct=sumExp>0&&topCat?.v?Math.round(topCat.v/sumExp*1000)/10:0;
     sumCardsEl.innerHTML=`
-      <div style="background:var(--sf2);padding:12px 14px;border-radius:8px">
-        <div style="font-size:11px;color:var(--mu);margin-bottom:4px">조회 기간 총지출</div>
-        <div style="font-size:1.15rem;font-weight:700;color:var(--ex)">${fmt(sumExp)}</div>
+      <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+        <div style="background:rgba(239,68,68,.12);color:var(--ex);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📅</div>
+        <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">조회 기간 총지출</div><div style="font-size:1.2rem;font-weight:700;color:var(--ex)">${fmt(sumExp)}</div></div>
       </div>
-      <div style="background:var(--sf2);padding:12px 14px;border-radius:8px">
-        <div style="font-size:11px;color:var(--mu);margin-bottom:4px">평균 1회 지출</div>
-        <div style="font-size:1.15rem;font-weight:700;color:var(--tx)">${fmt(avgExp)}</div>
+      <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+        <div style="background:rgba(16,185,129,.12);color:var(--ac);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">💰</div>
+        <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">평균 지출</div><div style="font-size:1.2rem;font-weight:700;color:var(--tx)">${fmt(avgExp)}</div><div style="font-size:10px;color:var(--mu);margin-top:2px">1회 기준</div></div>
       </div>
-      <div style="background:var(--sf2);padding:12px 14px;border-radius:8px">
-        <div style="font-size:11px;color:var(--mu);margin-bottom:4px">가장 많이 쓴 카테고리</div>
-        <div style="font-size:1.15rem;font-weight:700;color:var(--ac)">${topCat?.v?`${catIcon(topCat.c)} ${topCat.c}`:'-'}</div>
+      <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+        <div style="background:rgba(249,115,22,.12);color:#f97316;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">🏆</div>
+        <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">가장 많이 쓴 카테고리</div><div style="font-size:1.2rem;font-weight:700;color:#f97316">${topCat?.v?`${catIcon(topCat.c)} ${topCat.c}`:'-'}</div>${topCat?.v?`<div style="font-size:10px;color:var(--mu);margin-top:2px">${fmt(topCat.v)} (${topPct}%)</div>`:''}</div>
       </div>`;
   }
 
@@ -2130,7 +2191,7 @@ function render(){
       <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
       <td style="font-size:11px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:''}</td>
       <td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td>
-      <td style="white-space:nowrap">${!t.isFixed?`<button class="btn-edit" onclick="openTxModal(${t.id})" title="수정">✎</button><button class="btn-edit" onclick="dupTx(${t.id})" title="복제">⎘</button><button class="btn-del" onclick="delTx(${t.id})" title="삭제">✕</button>`:''}</td>
+      <td style="white-space:nowrap">${!t.isFixed?`<button class="tbtn" onclick="openTxModal(${t.id})">수정</button><button class="tbtn" onclick="dupTx(${t.id})">복제</button><button class="tbtn tbtn-del" onclick="delTx(${t.id})">삭제</button>`:''}</td>
     </tr>`;
   }).join('');
 
