@@ -1070,7 +1070,7 @@ function render(){
   // 연간현황
   renderYearly();
 
-  // 자산
+  // 자산 — 모드별 분리
   const tInc=txs.filter(t=>t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
   const tSav=txs.filter(t=>t.type==='expense'&&t.cat==='저축'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
   const tExpR=txs.filter(t=>t.type==='expense'&&t.cat!=='저축'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
@@ -1082,61 +1082,57 @@ function render(){
   const unmatched=Object.entries(sg).filter(([n])=>!assets.find(a=>a.type==='asset'&&a.name===n));
   const unmTot=unmatched.reduce((s,[,v])=>s+v,0);
 
-  // 통장 잔액 합산 (자산 포함 통장만)
+  // 통장 잔액 계산
   const acctBalMap={};
   accounts.forEach(a=>{
     const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((s,t)=>s+t.amount,0);
     const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
-    acctBalMap[a.id]={bal:a.init+ai-ae, a};
+    acctBalMap[a.id]={bal:a.init+ai-ae};
   });
-  const acctAssetTot=accounts.filter(a=>a.include!==false).reduce((s,a)=>s+acctBalMap[a.id].bal,0);
 
-  const ta=mAst+tSav+(cashBal>0?cashBal:0)+acctAssetTot;
-  const td=mDbt+(cashBal<0?Math.abs(cashBal):0);
-  const net=mAst+tSav+cashBal-mDbt+acctAssetTot;
+  let ta, td, net, acctCards, cashCard, savCard, astCards, dbtCards;
+
+  if(!isDate){
+    // ── 내 자산 모드 ──
+    const myAccts=accounts.filter(a=>a.include!==false);
+    const acctAssetTot=myAccts.reduce((s,a)=>s+acctBalMap[a.id].bal,0);
+    ta=mAst+tSav+(cashBal>0?cashBal:0)+acctAssetTot;
+    td=mDbt+(cashBal<0?Math.abs(cashBal):0);
+    net=mAst+tSav+cashBal-mDbt+acctAssetTot;
+
+    cashCard=`<div class="ai-card" style="border:1px solid rgba(96,165,250,.3)"><div class="a-lbl" style="color:var(--ac)">거래 내역 자동 합산</div><div class="a-nm">현금 잔액</div><div class="a-amt" style="color:${cashBal>=0?'var(--go)':'var(--ex)'}">${cashBal>=0?'':'-'}${fmt(cashBal)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">수입 ${fmt(tInc)} · 지출 ${fmt(tExpR)}</div></div>`;
+    savCard=unmatched.length>0?`<div class="ai-card" style="border:1px solid rgba(74,222,128,.3);cursor:pointer" onclick="toggleSavPanel()"><div class="a-lbl" style="color:var(--ic)">거래 내역 자동 · 클릭해서 상세보기</div><div class="a-nm">적금 누적 (기타)</div><div class="a-amt" style="color:var(--ic)">${fmt(unmTot)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">총 ${unmatched.length}건</div></div>`:'';
+    acctCards=myAccts.map(a=>`<div class="ai-card" style="border:1px solid rgba(251,191,36,.2)"><div class="a-lbl" style="color:var(--go)">통장 · ${a.bank||'은행'}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:${acctBalMap[a.id].bal>=0?'var(--go)':'var(--ex)'}">${acctBalMap[a.id].bal<0?'-':''}${fmt(acctBalMap[a.id].bal)}</div><div style="font-size:11px;color:var(--mu);margin-top:4px">${a.num||'계좌번호 없음'}</div><div class="ifoot"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div></div>`).join('');
+    const merged=assets.filter(a=>a.type==='asset').map(a=>{const sv=sg[a.name]||0;return{...a,amount:a.amount+sv,sv};});
+    astCards=merged.map(a=>{
+      const hasDates=a.start&&a.end;
+      let dateInfo='';
+      if(hasDates){
+        const s=new Date(a.start),e=new Date(a.end),n=new Date();
+        const total=e-s,elapsed=Math.min(Math.max(n-s,0),total);
+        const pct=Math.round(elapsed/total*100);
+        const dLeft=Math.max(0,Math.ceil((e-n)/(1000*60*60*24)));
+        const cls=pct>=100?'ov':pct>=80?'warn':'ok';
+        dateInfo=`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:4px"><span>${a.start}</span><span>${a.end}</span></div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--mu);margin-top:3px;display:flex;justify-content:space-between"><span style="color:${pct>=100?'var(--ic)':'var(--mu)'}">${pct}% 경과</span><span>${pct>=100?'만기 완료':'D-'+dLeft}</span></div>${a.monthly?`<div style="font-size:11px;color:var(--mu);margin-top:3px">월 납입 ${fmt(a.monthly)}</div>`:''}</div>`;
+      }
+      return`<div class="ai-card"><div class="a-lbl" style="color:${a.sv>0?'var(--ic)':'var(--mu)'}">${a.cat} · 자산${a.sv>0?' + 저축합산':''}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--go)">${fmt(a.amount)}</div>${a.sv>0?`<div style="font-size:11px;color:var(--mu);margin-top:4px">기본 ${fmt(a.amount-a.sv)} + 저축 ${fmt(a.sv)}</div>`:''}${dateInfo}<div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`;
+    }).join('');
+    dbtCards=assets.filter(a=>a.type==='debt').map(a=>`<div class="ai-card"><div class="a-lbl">${a.cat} · 부채</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--ex)">-${fmt(a.amount)}</div><div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`).join('');
+
+  } else {
+    // ── 데이트 통장 모드 ──
+    const dateAccts=accounts.filter(a=>a.include===false);
+    const dateTot=dateAccts.reduce((s,a)=>s+acctBalMap[a.id].bal,0);
+    ta=dateTot; td=0; net=dateTot;
+    cashCard=''; savCard=''; astCards=''; dbtCards='';
+    acctCards=dateAccts.length>0
+      ? dateAccts.map(a=>`<div class="ai-card" style="border:1px solid rgba(168,85,247,.3)"><div class="a-lbl" style="color:#c084fc">공유 통장 · ${a.bank||'은행'}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:${acctBalMap[a.id].bal>=0?'#c084fc':'var(--ex)'}">${acctBalMap[a.id].bal<0?'-':''}${fmt(acctBalMap[a.id].bal)}</div><div style="font-size:11px;color:var(--mu);margin-top:4px">${a.num||'계좌번호 없음'}</div><div class="ifoot"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div></div>`).join('')
+      : '<div class="empty" style="grid-column:1/-1">통장 관리에서 "자산 제외" 통장을 추가하세요</div>';
+  }
+
   document.getElementById('a-tot').textContent=fmt(ta);
   document.getElementById('a-dbt').textContent=fmt(td);
   document.getElementById('a-net').textContent=(net<0?'-':'')+fmt(net);
-
-  // 통장 카드 (자산 포함 통장만 총자산 목록에 표시)
-  const acctCards=accounts.filter(a=>a.include!==false).map(a=>{
-    const {bal}=acctBalMap[a.id];
-    return`<div class="ai-card" style="border:1px solid rgba(251,191,36,.2)">
-      <div class="a-lbl" style="color:var(--go)">통장 · ${a.bank||'은행'}</div>
-      <div class="a-nm">${a.name}</div>
-      <div class="a-amt" style="color:${bal>=0?'var(--go)':'var(--ex)'}">${bal<0?'-':''}${fmt(bal)}</div>
-      <div style="font-size:11px;color:var(--mu);margin-top:4px">${a.num||'계좌번호 없음'}</div>
-      <div class="ifoot"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
-    </div>`;
-  }).join('');
-
-  const cashCard=`<div class="ai-card" style="border:1px solid rgba(96,165,250,.3)"><div class="a-lbl" style="color:var(--ac)">거래 내역 자동 합산</div><div class="a-nm">현금 잔액</div><div class="a-amt" style="color:${cashBal>=0?'var(--go)':'var(--ex)'}">${cashBal>=0?'':'-'}${fmt(cashBal)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">수입 ${fmt(tInc)} · 지출 ${fmt(tExpR)}</div></div>`;
-  const savCard=unmatched.length>0?`<div class="ai-card" style="border:1px solid rgba(74,222,128,.3);cursor:pointer" onclick="toggleSavPanel()"><div class="a-lbl" style="color:var(--ic)">거래 내역 자동 · 클릭해서 상세보기</div><div class="a-nm">적금 누적 (기타)</div><div class="a-amt" style="color:var(--ic)">${fmt(unmTot)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">총 ${unmatched.length}건</div></div>`:'';
-  const merged=assets.filter(a=>a.type==='asset').map(a=>{const sv=sg[a.name]||0;return{...a,amount:a.amount+sv,sv};});
-  const astCards=merged.map(a=>{
-    const hasDates=a.start&&a.end;
-    let dateInfo='';
-    if(hasDates){
-      const s=new Date(a.start),e=new Date(a.end),n=new Date();
-      const total=e-s, elapsed=Math.min(Math.max(n-s,0),total);
-      const pct=Math.round(elapsed/total*100);
-      const dLeft=Math.max(0,Math.ceil((e-n)/(1000*60*60*24)));
-      const cls=pct>=100?'ov':pct>=80?'warn':'ok';
-      dateInfo=`<div style="margin-top:8px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:4px">
-          <span>${a.start}</span><span>${a.end}</span>
-        </div>
-        <div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div>
-        <div style="font-size:11px;color:var(--mu);margin-top:3px;display:flex;justify-content:space-between">
-          <span style="color:${pct>=100?'var(--ic)':'var(--mu)'}">${pct}% 경과</span>
-          <span>${pct>=100?'만기 완료':'D-'+dLeft}</span>
-        </div>
-        ${a.monthly?`<div style="font-size:11px;color:var(--mu);margin-top:3px">월 납입 ${fmt(a.monthly)}</div>`:''}
-      </div>`;
-    }
-    return`<div class="ai-card"><div class="a-lbl" style="color:${a.sv>0?'var(--ic)':'var(--mu)'}">${a.cat} · 자산${a.sv>0?' + 저축합산':''}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--go)">${fmt(a.amount)}</div>${a.sv>0?`<div style="font-size:11px;color:var(--mu);margin-top:4px">기본 ${fmt(a.amount-a.sv)} + 저축 ${fmt(a.sv)}</div>`:''}${dateInfo}<div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`;
-  }).join('');
-  const dbtCards=assets.filter(a=>a.type==='debt').map(a=>`<div class="ai-card"><div class="a-lbl">${a.cat} · 부채</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--ex)">-${fmt(a.amount)}</div><div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`).join('');
   document.getElementById('asset-list').innerHTML=cashCard+savCard+acctCards+astCards+dbtCards||'<div class="empty">자산을 추가해보세요</div>';
   const sp=document.getElementById('sav-panel');
   if(savOpen){renderSavDetail();sp.style.display='block';}else sp.style.display='none';
