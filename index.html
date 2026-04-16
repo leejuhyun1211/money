@@ -2315,7 +2315,7 @@ function doLogin(){
   if(!user){err.textContent='아이디 또는 비밀번호가 틀렸습니다.';return;}
   sessionStorage.setItem('gb_loggedIn', id);
   document.getElementById('login-screen').style.display='none';
-  document.getElementById('main-app').style.display='block';
+  document.getElementById('main-app').style.display='flex';
   document.getElementById('header-user').textContent=`👤 ${id}`;
   err.textContent='';
 }
@@ -2334,7 +2334,7 @@ function doSignup(){
   localStorage.setItem('gb_users',JSON.stringify(stored));
   sessionStorage.setItem('gb_loggedIn',id);
   document.getElementById('login-screen').style.display='none';
-  document.getElementById('main-app').style.display='block';
+  document.getElementById('main-app').style.display='flex';
   document.getElementById('header-user').textContent=`👤 ${id}`;
   err.textContent='';
   // 신규 가입 후 온보딩
@@ -2440,7 +2440,7 @@ function checkAuth(){
   const loggedIn=sessionStorage.getItem('gb_loggedIn');
   if(loggedIn){
     document.getElementById('login-screen').style.display='none';
-    document.getElementById('main-app').style.display='block';
+    document.getElementById('main-app').style.display='flex';
     document.getElementById('header-user').textContent=`👤 ${loggedIn}`;
   }
   const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
