@@ -1170,7 +1170,7 @@ function render(){
   }
   // 통장 관리 — 모드별 필터
   const modeAccts = isDate ? accounts.filter(a=>a.include===false) : accounts;
-  const modeTot = modeAccts.reduce((s,a)=>{
+  const modeTot = modeAccts.filter(a=>a.include!==false).reduce((s,a)=>{
     const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((ss,t)=>ss+t.amount,0);
     const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((ss,t)=>ss+t.amount,0);
     return s+a.init+ai-ae;
