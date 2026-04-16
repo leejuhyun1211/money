@@ -1168,14 +1168,17 @@ function render(){
       </tr>`;
     }).join('');
   }
-  document.getElementById('ac-tot').textContent=fmt(accounts.filter(a=>a.include!==false).reduce((s,a)=>{
+  // 통장 관리 — 모드별 필터
+  const modeAccts = isDate ? accounts.filter(a=>a.include===false) : accounts.filter(a=>a.include!==false);
+  const modeTot = modeAccts.reduce((s,a)=>{
     const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((ss,t)=>ss+t.amount,0);
     const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((ss,t)=>ss+t.amount,0);
     return s+a.init+ai-ae;
-  },0));
+  },0);
+  document.getElementById('ac-tot').textContent=fmt(modeTot);
   document.getElementById('ac-inc').textContent=fmt(acInc);
   document.getElementById('ac-exp').textContent=fmt(acExp);
-  document.getElementById('acct-list').innerHTML=accounts.length?accounts.map(a=>{
+  document.getElementById('acct-list').innerHTML=modeAccts.length?modeAccts.map(a=>{
     const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((s,t)=>s+t.amount,0);
     const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const bal=a.init+ai-ae;
@@ -1183,7 +1186,7 @@ function render(){
     return`<div class="acct-card${excluded?' excluded':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div class="acct-bank">${a.bank||'은행'}</div>
-        ${excluded?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:2px 6px;border-radius:4px">자산 미포함</span>`:''}
+        ${excluded?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:#c084fc;padding:2px 6px;border-radius:4px">공유통장</span>`:''}
       </div>
       <div class="acct-name">${a.name}</div>
       <div class="acct-num">${a.num||'계좌번호 없음'}</div>
@@ -1191,11 +1194,14 @@ function render(){
       <div class="acct-detail"><span>입금 ${fmt(ai)}</span><span>출금 ${fmt(ae)}</span></div>
       <div class="ifoot" style="margin-top:8px"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
     </div>`;
-  }).join(''):'<div class="empty">통장을 추가해보세요</div>';
+  }).join(''):'<div class="empty">이 모드에 해당하는 통장이 없습니다</div>';
+
+  // 통장별 거래 내역도 모드 필터
+  const modeAcctIds=modeAccts.map(a=>String(a.id));
   const acSel=document.getElementById('ac-filter').value;
-  const acTxs=acSel?txs.filter(t=>t.acctId===acSel):txs;
-  document.getElementById('ac-tx-empty').style.display=acTxs.length?'none':'block';
-  document.getElementById('ac-tx-body').innerHTML=acTxs.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td><td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></td></tr>`).join('');
+  const acTxsAll=acSel?txs.filter(t=>t.acctId===acSel):txs.filter(t=>!t.acctId||modeAcctIds.includes(t.acctId));
+  document.getElementById('ac-tx-empty').style.display=acTxsAll.length?'none':'block';
+  document.getElementById('ac-tx-body').innerHTML=acTxsAll.map(t=>`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${t.desc}</td><td style="color:var(--mu);font-size:12px">${t.cat}</td><td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td><td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="btn-edit" onclick="openTxModal(${t.id})">✎</button><button class="btn-del" onclick="delTx(${t.id})">✕</button></td></tr>`).join('');
 
   // 설정
   document.getElementById('set-tx-cats').innerHTML=txCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('tx','${c}')">✕</button></span>`).join('');
