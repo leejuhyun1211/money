@@ -645,29 +645,40 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 설정 -->
 <div class="page" id="page-settings">
-  <div class="ss"><h3>거래 카테고리</h3>
+  <!-- 서브 네비 (탭 네비와 동일 스타일) -->
+  <div class="nav" style="margin-bottom:1.5rem">
+    <button class="nav-tab active" onclick="setSettingsSec('cats',this)">거래 카테고리</button>
+    <button class="nav-tab" onclick="setSettingsSec('budgets',this)">카테고리별 예산</button>
+    <button class="nav-tab" onclick="setSettingsSec('asset',this)">자산 종류</button>
+    <button class="nav-tab" onclick="setSettingsSec('fixed',this)">고정 지출 카테고리</button>
+    <button class="nav-tab" onclick="setSettingsSec('app',this)">앱 설정</button>
+    <button class="nav-tab" onclick="setSettingsSec('data',this)">데이터 관리</button>
+    <button class="nav-tab" onclick="setSettingsSec('account',this)">계정</button>
+  </div>
+
+  <div class="ss" data-sec="cats"><h3>거래 카테고리</h3>
     <div id="set-tx-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-tx-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('tx')"><button class="btn btn-blue btn-sm" onclick="addCat('tx')">+ 추가</button></div>
   </div>
-  <div class="ss"><h3>카테고리별 예산</h3>
+  <div class="ss" data-sec="budgets" style="display:none"><h3>카테고리별 예산</h3>
     <div id="set-budgets" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px"></div>
   </div>
-  <div class="ss"><h3>자산 종류</h3>
+  <div class="ss" data-sec="asset" style="display:none"><h3>자산 종류</h3>
     <div id="set-asset-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-asset-cat" placeholder="새 종류" onkeydown="if(event.key==='Enter')addCat('asset')"><button class="btn btn-gold btn-sm" onclick="addCat('asset')">+ 추가</button></div>
   </div>
-  <div class="ss"><h3>고정 지출 카테고리</h3>
+  <div class="ss" data-sec="fixed" style="display:none"><h3>고정 지출 카테고리</h3>
     <div id="set-fixed-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-fixed-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('fixed')"><button class="btn btn-pu btn-sm" onclick="addCat('fixed')">+ 추가</button></div>
   </div>
-  <div class="ss"><h3>앱 설정</h3>
+  <div class="ss" data-sec="app" style="display:none"><h3>앱 설정</h3>
     <div style="display:flex;gap:12px;flex-wrap:wrap">
       <div class="mf" style="flex:1;min-width:160px"><label>월 시작일 (1~31)</label><input id="set-month-start" type="number" min="1" max="31" onchange="updSetting('monthStartDay',this.value)"></div>
       <div class="mf" style="flex:1;min-width:160px"><label>기본 통장</label><select id="set-default-acct" onchange="updSetting('defaultAcctId',this.value)"><option value="">선택 안 함</option></select></div>
     </div>
     <div style="font-size:11px;color:var(--mu);margin-top:6px">기본 통장을 설정하면 빠른 거래 추가 시 자동으로 선택됩니다.</div>
   </div>
-  <div class="ss"><h3>데이터 관리</h3>
+  <div class="ss" data-sec="data" style="display:none"><h3>데이터 관리</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-gh" onclick="exportData()" style="font-size:13px">📥 백업 내보내기</button>
       <label class="btn btn-gh" style="font-size:13px;cursor:pointer;margin:0">
@@ -677,7 +688,7 @@ tr:hover td{background:var(--sf2);}
     </div>
     <div style="font-size:11px;color:var(--mu);margin-top:6px">모든 거래/자산/고정지출/통장/설정이 JSON 파일로 저장됩니다.</div>
   </div>
-  <div class="ss"><h3>계정</h3>
+  <div class="ss" data-sec="account" style="display:none"><h3>계정</h3>
     <button class="btn btn-gh" onclick="doLogout()" style="font-size:13px">🚪 로그아웃</button>
   </div>
 </div>
@@ -1129,6 +1140,14 @@ function importData(event){
     }
   };
   reader.readAsText(file);
+}
+
+// ── 설정 서브탭 ──
+function setSettingsSec(id, el){
+  const page=document.getElementById('page-settings'); if(!page)return;
+  page.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  page.querySelectorAll('.ss[data-sec]').forEach(s=>s.style.display=s.dataset.sec===id?'':'none');
 }
 
 // ── NAV ──
