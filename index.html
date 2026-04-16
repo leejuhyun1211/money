@@ -648,7 +648,7 @@ tr:hover td{background:var(--sf2);}
 <!-- 설정 -->
 <div class="page" id="page-settings">
   <div class="ss"><h3>거래 카테고리</h3>
-    <div class="tl" id="set-tx-cats"></div>
+    <div id="set-tx-cats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:1rem"></div>
     <div class="atr"><input id="new-tx-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('tx')"><button class="btn btn-blue btn-sm" onclick="addCat('tx')">+ 추가</button></div>
   </div>
   <div class="ss"><h3>카테고리별 예산</h3><div class="bsl" id="set-budgets"></div></div>
@@ -990,6 +990,15 @@ function setMode(mode){
   document.getElementById('mode-date').style.background = mode==='date' ? 'var(--pu)' : '';
   document.getElementById('mode-date').style.borderColor = mode==='date' ? 'var(--pu)' : '';
   document.getElementById('mode-date').style.color = mode==='date' ? '#fff' : '';
+  // 고정지출 탭은 내 자산 전용이므로 데이트 모드에서는 숨김
+  const fxTab=Array.from(document.querySelectorAll('.nav-tab')).find(b=>b.textContent.includes('고정'));
+  if(fxTab) fxTab.style.display = mode==='date' ? 'none' : '';
+  // 활성 탭이 고정지출인 상태에서 데이트 모드로 전환하면 거래내역으로 돌아감
+  if(mode==='date' && document.getElementById('page-fixed')?.classList.contains('active')){
+    const homeTab=document.querySelector('.nav-tab');
+    if(homeTab) P('home',homeTab);
+    return;
+  }
   render();
 }
 
@@ -2103,9 +2112,11 @@ function render(){
   }
 
   // 통장 탭
-  const modeTot=bankAccts.filter(a=>a.include!==false).reduce((s,a)=>s+acctBalMap[a.id].bal,0);
-  const acInc=txs.filter(t=>ymKey(t.date)===acYm&&t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
-  const acExp=txs.filter(t=>ymKey(t.date)===acYm&&t.type==='expense'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  // modeAccts에 이미 모드 필터 적용됨 — 추가 필터 제거
+  const modeTot=bankAccts.reduce((s,a)=>s+acctBalMap[a.id].bal,0);
+  const modeMonth=modeTxs(txs.filter(t=>ymKey(t.date)===acYm));
+  const acInc=modeMonth.filter(t=>t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const acExp=modeMonth.filter(t=>t.type==='expense'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
   const acTotEl=document.getElementById('ac-tot');
   if(acTotEl)acTotEl.textContent=fmt(modeTot);
   const acIncEl=document.getElementById('ac-inc');
@@ -2206,11 +2217,11 @@ function render(){
   // 설정
   document.getElementById('set-tx-cats').innerHTML=txCats.map(c=>{
     const ic=catIcon(c), cl=catColor(c);
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--sf2);border-radius:6px;margin:2px;flex-wrap:wrap">
-      <input type="text" value="${ic}" onchange="updCatMeta('${c}','icon',this.value)" style="width:34px;text-align:center;padding:3px;font-size:14px" title="이모지">
-      <input type="color" value="${cl}" onchange="updCatMeta('${c}','color',this.value)" style="width:28px;height:24px;padding:0;border:none;cursor:pointer" title="색상">
-      <span style="font-size:13px">${c}</span>
-      <button class="td" onclick="delCat('tx','${c}')" style="margin-left:auto">✕</button>
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sf2);border-radius:6px">
+      <input type="text" value="${ic}" onchange="updCatMeta('${c}','icon',this.value)" style="width:36px;min-width:36px;text-align:center;padding:4px;font-size:14px" title="이모지">
+      <input type="color" value="${cl}" onchange="updCatMeta('${c}','color',this.value)" style="width:30px;min-width:30px;height:28px;padding:0;border:none;cursor:pointer" title="색상">
+      <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span>
+      <button class="td" onclick="delCat('tx','${c}')">✕</button>
     </div>`;
   }).join('');
   document.getElementById('set-budgets').innerHTML=txCats.map(cat=>`<div class="bsr"><span class="bn">${catIcon(cat)} ${cat}</span><input type="number" placeholder="예산" value="${budgets[cat]||''}" oninput="updBudget('${cat}',this.value)" style="flex:1"><span style="font-size:12px;color:var(--mu)">원/월</span></div>`).join('');
