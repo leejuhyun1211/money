@@ -107,6 +107,7 @@ tr:hover td{background:var(--sf2);}
 .pg.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600;}
 .pg:disabled{opacity:.3;cursor:not-allowed;}
 @media(max-width:600px){.fab{bottom:16px;right:16px;width:52px;height:52px;}}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr !important;}}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
 .ai-card,.fi{background:var(--sf2);border-radius:8px;padding:14px;}
@@ -300,12 +301,12 @@ tr:hover td{background:var(--sf2);}
   </div>
 </div>
 
-<!-- 거래 내역 -->
+<!-- 대시보드 -->
 <div class="page active" id="page-home">
-  <!-- 인사말 -->
-  <div style="margin-bottom:1.5rem">
-    <h2 id="greeting" style="font-size:1.35rem;font-weight:700;margin:0 0 4px">안녕하세요!</h2>
-    <div id="today-date" style="font-size:13px;color:var(--mu)"></div>
+  <!-- 인사말 + 오늘 날짜 뱃지 -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.2rem;flex-wrap:wrap">
+    <h2 id="greeting" style="font-size:1.35rem;font-weight:700;margin:0">안녕하세요!</h2>
+    <span id="today-date" style="background:rgba(16,185,129,.1);color:var(--ac);padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500"></span>
   </div>
 
   <!-- 월 이동 -->
@@ -319,75 +320,80 @@ tr:hover td{background:var(--sf2);}
     <div style="width:100px"></div>
   </div>
 
-  <!-- 대시보드 1행: 핵심 요약 -->
-  <div class="cards" style="grid-template-columns:repeat(4,1fr);margin-bottom:1rem">
-    <div class="card" style="border-color:rgba(96,165,250,.3)">
-      <div class="label">이번달 남은 돈</div>
-      <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
-      <div id="d-left-sub" style="font-size:11px;color:var(--mu);margin-top:6px"></div>
-    </div>
-    <div class="card" style="border-color:rgba(168,85,247,.3)">
-      <div class="label">예정 고정지출 (3일 내)</div>
-      <div class="amount" id="d-upcoming" style="color:#c084fc">₩0</div>
-      <div id="d-upcoming-sub" style="font-size:11px;color:var(--mu);margin-top:6px"></div>
-    </div>
-    <div class="card" style="border-color:rgba(251,191,36,.3)">
-      <div class="label">예산 사용률</div>
-      <div class="amount" id="d-budget-rate" style="color:var(--go)">0%</div>
-      <div id="d-budget-sub" style="font-size:11px;color:var(--mu);margin-top:6px"></div>
-    </div>
-    <div class="card" style="border-color:rgba(248,113,113,.3)">
-      <div class="label">카드 결제 예정</div>
-      <div class="amount" id="d-card" style="color:var(--ex)">₩0</div>
-      <div id="d-card-sub" style="font-size:11px;color:var(--mu);margin-top:6px"></div>
-    </div>
-  </div>
-
-  <!-- 빠른 거래 추가 (메인 인라인) -->
-  <div class="box" style="margin-bottom:1rem">
-    <div class="box-hd"><h2>⚡ 빠른 거래 추가</h2><button onclick="openAddTxModal()" style="background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer">상세 입력 ▶</button></div>
-    <div class="box-bd">
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:140px"><label>금액</label><input id="f-amt" type="number" placeholder="0원"></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <label style="font-size:12px;color:var(--mu)">유형</label>
-          <div style="display:flex;gap:4px">
-            <button id="qt-exp" class="btn btn-sm" onclick="setQType('expense')" style="background:var(--ac);color:#fff;min-width:60px">지출</button>
-            <button id="qt-inc" class="btn btn-sm" onclick="setQType('income')" style="background:var(--sf2);border:1px solid var(--bd);color:var(--mu);min-width:60px">수입</button>
-          </div>
+  <!-- 2열 레이아웃: 좌(카드+예산) / 우(빠른추가+최근거래) -->
+  <div class="dash-grid" style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:flex-start">
+    <!-- 좌측 -->
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <!-- 핵심 카드 2x2 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(16,185,129,.15);color:var(--ac);width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">💰</span><div class="label">이번달 남은 돈</div></div>
+          <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
+          <div id="d-left-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
         </div>
-        <div class="field" style="flex:1;min-width:140px"><label>카테고리</label><select id="f-cat"></select></div>
-        <button class="btn" onclick="addTxInline()" style="background:var(--ac);color:#fff;padding:9px 22px;font-weight:600">저장</button>
+        <div class="card" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.25)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(249,115,22,.15);color:#f97316;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">📅</span><div class="label">3일 내 예정 고정지출</div></div>
+          <div class="amount" id="d-upcoming" style="color:#f97316">₩0</div>
+          <div id="d-upcoming-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        </div>
+        <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(59,130,246,.15);color:#3b82f6;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">📊</span><div class="label">예산 사용률</div></div>
+          <div class="amount" id="d-budget-rate" style="color:#3b82f6">0%</div>
+          <div id="d-budget-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        </div>
+        <div class="card" style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(168,85,247,.15);color:#a855f7;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">💳</span><div class="label">카드 결제 예정</div></div>
+          <div class="amount" id="d-card" style="color:#a855f7">₩0</div>
+          <div id="d-card-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
+        </div>
+      </div>
+
+      <!-- 오늘 남은 예산 -->
+      <div class="box" style="margin:0">
+        <div class="box-hd"><h2>📱 오늘 남은 예산</h2></div>
+        <div class="box-bd">
+          <div style="font-size:2.2rem;font-weight:700;color:var(--ac);line-height:1" id="d-today-left">₩0</div>
+          <div style="font-size:12px;color:var(--mu);margin-top:6px" id="d-today-sub"></div>
+        </div>
+      </div>
+
+      <!-- 예산 사용 현황 -->
+      <div class="box" id="bgrid-box" style="margin:0">
+        <div class="box-hd"><h2>📊 예산 사용 현황</h2></div>
+        <div class="box-bd">
+          <div class="bg" id="bgrid"></div>
+          <div id="d-insight" style="margin-top:12px;padding:10px 14px;background:rgba(16,185,129,.08);border-radius:8px;font-size:13px;color:var(--ac);display:none">💡 <span id="d-insight-txt"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우측 -->
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <!-- 빠른 거래 추가 (세로) -->
+      <div class="box" style="margin:0">
+        <div class="box-hd"><h2>⚡ 빠른 거래 추가</h2></div>
+        <div class="box-bd">
+          <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--sf2);border-radius:8px;padding:4px">
+            <button id="qt-exp" onclick="setQType('expense')" style="flex:1;background:var(--ac);color:#fff;border:none;border-radius:6px;padding:8px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500">지출</button>
+            <button id="qt-inc" onclick="setQType('income')" style="flex:1;background:transparent;color:var(--mu);border:none;border-radius:6px;padding:8px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500">수입</button>
+          </div>
+          <div class="mf" style="margin-bottom:10px"><input id="f-amt" type="number" placeholder="0원" style="font-size:16px;padding:11px 12px"></div>
+          <div class="mf" style="margin-bottom:12px"><select id="f-cat"></select></div>
+          <button class="btn" onclick="addTxInline()" style="background:var(--ac);color:#fff;width:100%;padding:11px;font-weight:600">저장</button>
+          <div style="text-align:center;margin-top:10px"><button onclick="openAddTxModal()" style="background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer">상세 입력 ▶</button></div>
+        </div>
+      </div>
+
+      <!-- 최근 거래 -->
+      <div class="box" style="margin:0">
+        <div class="box-hd"><h2>최근 거래</h2><button onclick="scrollToTxList()" style="background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer">전체 보기 ▶</button></div>
+        <div id="recent-5" style="padding:0 1.4rem 1rem"></div>
       </div>
     </div>
   </div>
 
-  <!-- 오늘 남은 예산 큰 카드 -->
-  <div class="box" style="margin-bottom:1rem">
-    <div class="box-hd"><h2>오늘 남은 예산</h2></div>
-    <div class="box-bd">
-      <div style="font-size:2.2rem;font-weight:700;color:var(--ac);line-height:1" id="d-today-left">₩0</div>
-      <div style="font-size:12px;color:var(--mu);margin-top:6px" id="d-today-sub"></div>
-    </div>
-  </div>
-
   <!-- 활성 필터 칩 -->
-  <div id="active-filters" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-
-  <!-- 예산 사용 현황 (기본 펼침) -->
-  <div class="box" id="bgrid-box" style="margin-bottom:1rem">
-    <div class="box-hd"><h2>예산 사용 현황</h2></div>
-    <div class="box-bd">
-      <div class="bg" id="bgrid"></div>
-      <div id="d-insight" style="margin-top:12px;padding:10px 14px;background:rgba(16,185,129,.08);border-radius:8px;font-size:13px;color:var(--ac);display:none">💡 <span id="d-insight-txt"></span></div>
-    </div>
-  </div>
-
-  <!-- 최근 거래 -->
-  <div class="box" style="margin-bottom:1rem">
-    <div class="box-hd"><h2>최근 거래</h2></div>
-    <div id="recent-5" style="padding:0 1.4rem 1rem"></div>
-  </div>
+  <div id="active-filters" style="display:none;gap:6px;flex-wrap:wrap;margin:16px 0 12px"></div>
 
   <!-- 전체 거래 내역 -->
   <div class="box">
@@ -1320,6 +1326,7 @@ function updSetting(key,val){
 }
 
 // ── TX ──
+function scrollToTxList(){document.querySelector('#page-home .box:has(#tx-body)')?.scrollIntoView({behavior:'smooth',block:'start'});}
 function addTxInline(){
   const amt=parseInt(document.getElementById('f-amt').value);
   const cat=document.getElementById('f-cat').value;
