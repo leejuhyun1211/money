@@ -756,7 +756,7 @@ tr:hover td{background:var(--sf2);}
   </div>
 
   <!-- 좌/우 분할 -->
-  <div class="fx-grid" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+  <div class="fx-grid" style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
     <!-- 좌측: 고정 지출 목록 -->
     <div class="box" style="margin:0;overflow-x:auto">
       <div class="box-hd" style="justify-content:space-between"><h2>고정 지출 목록</h2><span style="font-size:12px;color:var(--mu)">결제일 순 보기</span></div>
@@ -1124,6 +1124,25 @@ tr:hover td{background:var(--sf2);}
       <div class="mf"><label>내 통장에서 이체</label><select id="settle-from"></select></div>
     </div>
     <div class="mft"><button class="btn-gh" onclick="closeSettleModal()">취소</button><button class="btn btn-pu" onclick="confirmSettle()">이체 생성</button></div>
+  </div>
+</div>
+
+<!-- 고정지출 수정 모달 -->
+<div class="mov" id="edit-fx-modal" style="display:none" onclick="if(event.target===this)closeFxEditModal()">
+  <div class="modal">
+    <div class="mhd"><h3>고정지출 수정</h3><button class="btn-del" onclick="closeFxEditModal()">✕</button></div>
+    <div class="mbd">
+      <div class="mf"><label>이름</label><input id="efx-name"></div>
+      <div class="mr">
+        <div class="mf"><label>금액</label><input id="efx-amt" type="number"></div>
+        <div class="mf"><label>결제일 (1~31)</label><input id="efx-day" type="number" min="1" max="31"></div>
+      </div>
+      <div class="mr">
+        <div class="mf"><label>카테고리</label><select id="efx-cat"></select></div>
+        <div class="mf"><label>연결 통장/카드</label><select id="efx-acct"><option value="">없음</option></select></div>
+      </div>
+    </div>
+    <div class="mft"><button class="btn-gh" onclick="closeFxEditModal()">취소</button><button class="btn btn-blue" onclick="saveFxEdit()">저장</button></div>
   </div>
 </div>
 
@@ -1600,6 +1619,37 @@ function updSetting(key,val){
 // ── TX ──
 function scrollToTxList(){const t=Array.from(document.querySelectorAll('.nav-tab')).find(b=>b.textContent.includes('거래 내역'));if(t)P('tx',t);}
 function setAssetFilter(f,el){window._assetFilter=f;document.querySelectorAll('#asset-filter .tbtn').forEach(b=>b.classList.remove('active'));el.classList.add('active');render();}
+let editFxId=null;
+function openFxEditModal(id){
+  const f=fixeds.find(x=>x.id===id); if(!f) return;
+  editFxId=id;
+  const fxAllCats=[...fixedCats,...txCats.filter(c=>!fixedCats.includes(c)&&c!=='급여'&&c!=='저축')];
+  const catSel=document.getElementById('efx-cat');
+  catSel.innerHTML=fxAllCats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  catSel.value=f.cat;
+  const acctSel=document.getElementById('efx-acct');
+  acctSel.innerHTML='<option value="">없음</option>'+accounts.filter(a=>a.include!==false).map(a=>`<option value="${a.id}">${a.actype==='card'?'💳':'🏦'}${a.name}</option>`).join('');
+  acctSel.value=f.acctId||'';
+  document.getElementById('efx-name').value=f.name;
+  document.getElementById('efx-amt').value=f.amount;
+  document.getElementById('efx-day').value=f.day;
+  document.getElementById('edit-fx-modal').style.display='flex';
+}
+function closeFxEditModal(){document.getElementById('edit-fx-modal').style.display='none';editFxId=null;}
+function saveFxEdit(){
+  if(!editFxId) return;
+  const i=fixeds.findIndex(f=>f.id===editFxId); if(i===-1) return;
+  const name=document.getElementById('efx-name').value.trim();
+  const amt=parseInt(document.getElementById('efx-amt').value);
+  const day=parseInt(document.getElementById('efx-day').value);
+  if(!name||!amt||amt<=0||!day||day<1||day>31){alert('이름/금액/결제일을 확인해주세요.');return;}
+  fixeds[i].name=name;
+  fixeds[i].amount=amt;
+  fixeds[i].day=day;
+  fixeds[i].cat=document.getElementById('efx-cat').value;
+  fixeds[i].acctId=document.getElementById('efx-acct').value;
+  save(); closeFxEditModal(); render();
+}
 function openFixedForm(){
   const box=document.getElementById('fx-form-box');
   if(box) box.classList.remove('collapsed');
@@ -2812,7 +2862,7 @@ function render(){
       <td style="font-size:12px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:'-'}</td>
       <td><span style="background:${stBg[st]};color:${stColor[st]};padding:3px 10px;border-radius:6px;font-size:11px;font-weight:500">${stMap[st]}</span></td>
       <td><span style="font-size:11px;color:var(--mu)">${hasAuto?'자동':'수동'}</span></td>
-      <td><div style="display:flex;gap:3px"><button class="tbtn" onclick="setFxStatus(${f.id},'${ym}','done')">완료</button><button class="tbtn" onclick="setFxStatus(${f.id},'${ym}','skip')">건너뜀</button><button class="tbtn tbtn-del" onclick="delFixed(${f.id})">삭제</button></div></td>
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap"><button class="tbtn" onclick="setFxStatus(${f.id},'${ym}','done')">완료</button><button class="tbtn" onclick="setFxStatus(${f.id},'${ym}','skip')">건너뜀</button><button class="tbtn" onclick="openFxEditModal(${f.id})">수정</button><button class="tbtn tbtn-del" onclick="delFixed(${f.id})">삭제</button></div></td>
     </tr>`;
   }).join('');
 
