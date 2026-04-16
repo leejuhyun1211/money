@@ -315,21 +315,15 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 대시보드 -->
 <div class="page active" id="page-home">
-  <!-- 인사말 + 오늘 날짜 뱃지 -->
+  <!-- 인사말 + 오늘 날짜 뱃지 + 월 이동 -->
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.2rem;flex-wrap:wrap">
     <h2 id="greeting" style="font-size:1.35rem;font-weight:700;margin:0">안녕하세요!</h2>
     <span id="today-date" style="background:rgba(16,185,129,.1);color:var(--ac);padding:5px 12px;border-radius:12px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px"></span>
-  </div>
-
-  <!-- 월 이동 -->
-  <div class="cal-nav" style="margin-bottom:1rem">
-    <div class="cnb">
+    <div class="cnb" style="margin-left:auto">
       <button onclick="hMv(-1)">◀</button>
       <select id="h-month-pick" onchange="hPickMonth(this.value)" style="padding:6px 10px;border-radius:8px;font-size:13px;background:var(--sf2);border:1px solid var(--bd);color:var(--tx);font-family:var(--font);cursor:pointer"></select>
       <button onclick="hMv(1)">▶</button>
     </div>
-    <h2 id="h-title"></h2>
-    <div style="width:100px"></div>
   </div>
 
   <!-- 2열 레이아웃: 좌(카드+예산) / 우(빠른추가+최근거래) -->
@@ -2349,7 +2343,7 @@ function render(){
     tdEl.innerHTML=`📅 오늘 ${t.getMonth()+1}월 ${t.getDate()}일 (${days[t.getDay()]})`;
   }
   const ym=`${hY}-${pad(hM+1)}`;
-  document.getElementById('h-title').textContent=`${hY}년 ${hM+1}월`;
+  const htEl=document.getElementById('h-title'); if(htEl) htEl.textContent=`${hY}년 ${hM+1}월`;
   // 월 선택 드롭다운 업데이트 (현재월 ±12개월)
   const mp=document.getElementById('h-month-pick');
   if(mp){
