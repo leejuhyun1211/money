@@ -927,9 +927,6 @@ function renderDashboard(ym,mTxs,mFix){
   const qb=document.getElementById('quick-btns');
   if(qb)qb.innerHTML=quickPresets.map(p=>`<button onclick='applyQuick(${JSON.stringify(p)})' style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:5px 12px;color:var(--tx);font-size:12px;cursor:pointer;font-family:var(--font)">${p.label}${p.amt?` <span style="color:var(--mu);font-size:11px">${fmt(p.amt)}</span>`:''}</button>`).join('');
 
-  const ft=document.getElementById('f-type');
-  if(ft){ft.value=qType;ft.style.display='none';}
-
   const prevYm=prevYmOf(ym);
   const prevExp2=txs.filter(t=>ymKey(t.date)===prevYm&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const diff=prevExp2>0?Math.round((exp-prevExp2)/prevExp2*100):0;
@@ -1160,9 +1157,9 @@ function updSetting(key,val){
 // ── TX ──
 function addTx(src){
   const d=src==='h';
-  const desc=(d?document.getElementById('f-desc'):document.getElementById('c-desc')).value.trim();
+  const desc=(d?document.getElementById('f-desc'):document.getElementById('c-desc')).value.trim()||(d?document.getElementById('f-cat').value:document.getElementById('c-cat').value);
   const amt=parseInt((d?document.getElementById('f-amt'):document.getElementById('c-amt')).value);
-  const type=(d?document.getElementById('f-type'):document.getElementById('c-type')).value;
+  const type=d?qType:document.getElementById('c-type').value;
   const cat=(d?document.getElementById('f-cat'):document.getElementById('c-cat')).value;
   const acctId=(d?document.getElementById('f-acct'):document.getElementById('c-acct')).value;
   const date=d?document.getElementById('f-date').value:selDate;
