@@ -298,10 +298,7 @@ tr:hover td{background:var(--sf2);}
 
   <!-- 대시보드 2행: 최근 거래 -->
   <div class="box" style="margin-bottom:1rem">
-    <div class="box-hd">
-      <h2>최근 거래</h2>
-      <div style="font-size:12px;color:var(--mu)">오늘 남은 예산 <span id="d-today-left" style="color:var(--ac);font-weight:600">계산 중</span></div>
-    </div>
+    <div class="box-hd"><h2>최근 거래</h2></div>
     <div id="recent-5" style="padding:0 1.4rem 1rem"></div>
   </div>
 
@@ -990,15 +987,6 @@ function setMode(mode){
   document.getElementById('mode-date').style.background = mode==='date' ? 'var(--pu)' : '';
   document.getElementById('mode-date').style.borderColor = mode==='date' ? 'var(--pu)' : '';
   document.getElementById('mode-date').style.color = mode==='date' ? '#fff' : '';
-  // 고정지출 탭은 내 자산 전용이므로 데이트 모드에서는 숨김
-  const fxTab=Array.from(document.querySelectorAll('.nav-tab')).find(b=>b.textContent.includes('고정'));
-  if(fxTab) fxTab.style.display = mode==='date' ? 'none' : '';
-  // 활성 탭이 고정지출인 상태에서 데이트 모드로 전환하면 거래내역으로 돌아감
-  if(mode==='date' && document.getElementById('page-fixed')?.classList.contains('active')){
-    const homeTab=document.querySelector('.nav-tab');
-    if(homeTab) P('home',homeTab);
-    return;
-  }
   render();
 }
 
@@ -1022,7 +1010,13 @@ function modeTxs(list){
     });
   } else {
     if(!dateIds.length) return [];
-    return list.filter(t=>dateIds.includes(String(t.acctId))&&!t.transferId);
+    return list.filter(t=>{
+      if(!dateIds.includes(String(t.acctId))) return false;
+      if(!t.transferId) return true;
+      // 이체: 상대가 내 통장이면 포함 (공유통장의 실제 수입/지출로 집계)
+      const other=txs.find(x=>x.transferId===t.transferId&&x.id!==t.id);
+      return !!(other&&!dateIds.includes(String(other.acctId)));
+    });
   }
 }
 
