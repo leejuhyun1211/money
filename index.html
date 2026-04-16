@@ -337,7 +337,7 @@ tr:hover td{background:var(--sf2);}
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:3px">이번 달 남은 돈</div>
             <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
-            <div id="d-left-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+            <span id="d-left-sub" style="display:none"></span>
           </div>
         </div>
         <div class="card" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.25);display:flex;align-items:center;gap:14px">
@@ -345,7 +345,7 @@ tr:hover td{background:var(--sf2);}
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:3px">3일 내 예정 고정지출</div>
             <div class="amount" id="d-upcoming" style="color:#f97316">₩0</div>
-            <div id="d-upcoming-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+            <span id="d-upcoming-sub" style="display:none"></span>
           </div>
         </div>
         <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;gap:14px">
@@ -361,7 +361,7 @@ tr:hover td{background:var(--sf2);}
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:3px">카드 결제 예정</div>
             <div class="amount" id="d-card" style="color:#a855f7">₩0</div>
-            <div id="d-card-sub" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
+            <span id="d-card-sub" style="display:none"></span>
           </div>
         </div>
       </div>
