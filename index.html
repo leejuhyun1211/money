@@ -941,9 +941,14 @@ function renderDashboard(ym,mTxs,mFix){
   const cardAccts=accounts.filter(a=>a.actype==='card'&&a.include!==false);
   const cardAmt=cardAccts.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&ymKey(t.date)===ym).reduce((ss,t)=>ss+t.amount,0),0);
   const dc=document.getElementById('d-card');
-  if(dc)dc.textContent=cardAmt>0?fmt(cardAmt):'없음';
   const dcs=document.getElementById('d-card-sub');
-  if(dcs)dcs.textContent=cardAccts.length>0?cardAccts.map(a=>a.name).join(', '):'신용카드 없음';
+  if(appMode==='date'){
+    if(dc)dc.textContent='-';
+    if(dcs)dcs.textContent='데이트 모드에서는 표시 안 됨';
+  } else {
+    if(dc)dc.textContent=cardAmt>0?fmt(cardAmt):'없음';
+    if(dcs)dcs.textContent=cardAccts.length>0?cardAccts.map(a=>a.name).join(', '):'신용카드 없음';
+  }
 
   if(todayD){
     const dayBudget=totalBudget>0?Math.round(totalBudget/dim):0;
@@ -1567,7 +1572,7 @@ function renderDP(){
 function renderCal(){
   const ym=`${cY}-${pad(cM+1)}`;
   document.getElementById('cal-title').textContent=`${cY}년 ${cM+1}월`;
-  const mTxs=txs.filter(t=>t.date&&t.date.slice(0,7)===ym);
+  const mTxs=modeTxs(txs.filter(t=>t.date&&t.date.slice(0,7)===ym));
   const mInc=mTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const mExp=mTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const mFix=appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0);
