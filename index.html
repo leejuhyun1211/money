@@ -201,9 +201,15 @@ tr:hover td{background:var(--sf2);}
     <div id="login-view">
       <h2>💰 가계부</h2>
       <div class="sub">로그인하여 시작하세요</div>
+      <ul style="list-style:none;padding:0;margin:0 0 16px;font-size:12px;color:var(--mu);line-height:1.8">
+        <li>📊 내 자산 · 데이트 통장 모드로 지출 분리</li>
+        <li>📅 고정지출 + 캘린더로 결제 예정 한눈에</li>
+        <li>💾 모든 데이터 로컬 저장 (내보내기/불러오기 지원)</li>
+      </ul>
       <div class="login-field"><label>아이디</label><input id="l-id" type="text" placeholder="아이디" onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()"></div>
       <div class="login-field"><label>비밀번호</label><input id="l-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="login-btn" onclick="doLogin()">로그인</button>
+      <button class="login-btn" onclick="doDemo()" style="background:transparent;border:1px solid var(--bd);color:var(--mu);margin-top:8px">🎯 체험하기 (샘플 데이터)</button>
       <div class="login-err" id="l-err"></div>
       <div class="login-switch" onclick="showSignup()">계정이 없으신가요? <span>회원가입</span></div>
     </div>
@@ -764,6 +770,39 @@ tr:hover td{background:var(--sf2);}
   </div>
 </div>
 
+<!-- 온보딩 모달 -->
+<div class="mov" id="onboarding-modal" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="mhd"><h3 id="ob-title">👋 환영합니다! (1/3)</h3><button class="btn-del" onclick="skipOnboarding()">✕</button></div>
+    <div class="mbd">
+      <!-- 단계 1: 주 사용 통장 -->
+      <div id="ob-step-1">
+        <div style="font-size:13px;color:var(--mu);margin-bottom:12px">먼저 주로 쓰시는 통장 하나를 등록해주세요.</div>
+        <div class="mf"><label>통장 이름</label><input id="ob-acct-name" placeholder="예: 우리은행 월급통장"></div>
+        <div class="mr">
+          <div class="mf"><label>은행</label><input id="ob-acct-bank" placeholder="우리은행"></div>
+          <div class="mf"><label>초기 잔액</label><input id="ob-acct-init" type="number" placeholder="0"></div>
+        </div>
+      </div>
+      <!-- 단계 2: 월 예산 -->
+      <div id="ob-step-2" style="display:none">
+        <div style="font-size:13px;color:var(--mu);margin-bottom:12px">카테고리별 월 예산을 입력해주세요. (비워두면 제외)</div>
+        <div id="ob-budgets"></div>
+      </div>
+      <!-- 단계 3: 고정지출 3개 -->
+      <div id="ob-step-3" style="display:none">
+        <div style="font-size:13px;color:var(--mu);margin-bottom:12px">자주 나가는 고정지출 3개를 등록해보세요. (비워둬도 됩니다)</div>
+        <div id="ob-fixeds"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn-gh" onclick="skipOnboarding()" style="font-size:13px">건너뛰기</button>
+      <button class="btn btn-gh" id="ob-prev-btn" onclick="obPrev()" style="font-size:13px;display:none">◀ 이전</button>
+      <button class="btn btn-blue" id="ob-next-btn" onclick="obNext()">다음 ▶</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── DATA ──
 let txs       = JSON.parse(localStorage.getItem('gb_txs')       || '[]');
@@ -774,6 +813,7 @@ let transfers = JSON.parse(localStorage.getItem('gb_transfers') || '[]');
 // 고정지출 월별 상태: {ym_fxId: 'pending'|'done'|'skip'}
 let fxStatus  = JSON.parse(localStorage.getItem('gb_fx_status') || '{}');
 let txCats    = JSON.parse(localStorage.getItem('gb_txCats')    || '["식비","교통","쇼핑","의료","구독","저축","급여","기타"]');
+let catMeta   = JSON.parse(localStorage.getItem('gb_catMeta')   || '{"식비":{"icon":"🍽️","color":"#fbbf24"},"교통":{"icon":"🚇","color":"#60a5fa"},"쇼핑":{"icon":"🛍️","color":"#f472b6"},"의료":{"icon":"💊","color":"#f87171"},"구독":{"icon":"📺","color":"#c084fc"},"저축":{"icon":"💰","color":"#4ade80"},"급여":{"icon":"💵","color":"#4ade80"},"기타":{"icon":"📦","color":"#94a3b8"}}');
 let assetCats = JSON.parse(localStorage.getItem('gb_assetCats') || '["예금/적금","현금","투자/주식","부동산","대출","카드부채","기타"]');
 let fixedCats = JSON.parse(localStorage.getItem('gb_fixedCats') || '["구독","보험","통신","주거","교육","기타"]');
 let budgets   = JSON.parse(localStorage.getItem('gb_budgets')   || '{"식비":300000,"교통":100000,"쇼핑":200000,"의료":100000,"구독":50000,"저축":500000,"기타":100000}');
@@ -947,6 +987,7 @@ function save(){
   localStorage.setItem('gb_fixedCats', JSON.stringify(fixedCats));
   localStorage.setItem('gb_budgets',   JSON.stringify(budgets));
   localStorage.setItem('gb_settings',  JSON.stringify(settings));
+  localStorage.setItem('gb_catMeta',   JSON.stringify(catMeta));
 }
 
 const fmt  = n => '₩' + Math.abs(n).toLocaleString('ko-KR');
@@ -984,13 +1025,20 @@ function prevYmOf(ym){
 }
 function parseTags(s){return (s||'').trim().split(/[\s,]+/).filter(x=>x);}
 function fmtTags(a){return (a||[]).join(' ');}
+function catIcon(cat){return catMeta[cat]?.icon||'';}
+function catColor(cat){return catMeta[cat]?.color||'#94a3b8';}
+function updCatMeta(cat,field,val){
+  if(!catMeta[cat]) catMeta[cat]={icon:'',color:'#94a3b8'};
+  catMeta[cat][field]=val;
+  save(); render();
+}
 function goMonth(m){
   hY=yY; hM=m-1;
   const homeTab=document.querySelector('.nav-tab');
   if(homeTab) P('home', homeTab);
 }
 
-const STORAGE_KEYS=['gb_txs','gb_assets','gb_fixeds','gb_accounts','gb_transfers','gb_fx_status','gb_txCats','gb_assetCats','gb_fixedCats','gb_budgets','gb_settings'];
+const STORAGE_KEYS=['gb_txs','gb_assets','gb_fixeds','gb_accounts','gb_transfers','gb_fx_status','gb_txCats','gb_assetCats','gb_fixedCats','gb_budgets','gb_settings','gb_catMeta'];
 
 function exportData(){
   const data={_version:1,_exportedAt:new Date().toISOString()};
@@ -1520,7 +1568,7 @@ function render(){
     const spent=mTxs.filter(t=>t.type==='expense'&&t.cat===cat).reduce((s,t)=>s+t.amount,0);
     const pct=Math.min(100,Math.round(spent/b*100));
     const cls=pct>=100?'ov':pct>=80?'warn':'ok';
-    return`<div class="bi"><div class="cat">${cat}</div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div class="bnum"><span class="sp">${fmt(spent)}</span><span>/ ${fmt(b)} (${pct}%)</span></div></div>`;
+    return`<div class="bi"><div class="cat">${catIcon(cat)} ${cat}</div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div class="bnum"><span class="sp">${fmt(spent)}</span><span>/ ${fmt(b)} (${pct}%)</span></div></div>`;
   }).join('')||'<div style="color:var(--mu);font-size:13px">설정에서 예산을 입력하세요</div>';
 
   // 거래 내역 테이블 (검색 + 필터 적용)
@@ -1565,7 +1613,7 @@ function render(){
     return`<tr${t.isFixed?' style="opacity:.7"':''}>
       <td style="color:var(--mu);font-size:11px">${t.date}</td>
       <td>${t.desc}${t.isFixed?` <span class="bdg auto">고정</span>`:''}${(t.tags||[]).map(tg=>`<span style="background:rgba(168,85,247,.12);color:#c084fc;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">#${tg}</span>`).join('')}</td>
-      <td><span style="background:var(--sf2);padding:2px 7px;border-radius:4px;font-size:11px">${t.cat}</span></td>
+      <td><span style="background:${catColor(t.cat)}22;color:${catColor(t.cat)};padding:2px 7px;border-radius:4px;font-size:11px">${catIcon(t.cat)} ${t.cat}</span></td>
       <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
       <td style="font-size:11px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:''}</td>
       <td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td>
@@ -1797,8 +1845,16 @@ function render(){
   }
 
   // 설정
-  document.getElementById('set-tx-cats').innerHTML=txCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('tx','${c}')">✕</button></span>`).join('');
-  document.getElementById('set-budgets').innerHTML=txCats.map(cat=>`<div class="bsr"><span class="bn">${cat}</span><input type="number" placeholder="예산" value="${budgets[cat]||''}" oninput="updBudget('${cat}',this.value)" style="flex:1"><span style="font-size:12px;color:var(--mu)">원/월</span></div>`).join('');
+  document.getElementById('set-tx-cats').innerHTML=txCats.map(c=>{
+    const ic=catIcon(c), cl=catColor(c);
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--sf2);border-radius:6px;margin:2px;flex-wrap:wrap">
+      <input type="text" value="${ic}" onchange="updCatMeta('${c}','icon',this.value)" style="width:34px;text-align:center;padding:3px;font-size:14px" title="이모지">
+      <input type="color" value="${cl}" onchange="updCatMeta('${c}','color',this.value)" style="width:28px;height:24px;padding:0;border:none;cursor:pointer" title="색상">
+      <span style="font-size:13px">${c}</span>
+      <button class="td" onclick="delCat('tx','${c}')" style="margin-left:auto">✕</button>
+    </div>`;
+  }).join('');
+  document.getElementById('set-budgets').innerHTML=txCats.map(cat=>`<div class="bsr"><span class="bn">${catIcon(cat)} ${cat}</span><input type="number" placeholder="예산" value="${budgets[cat]||''}" oninput="updBudget('${cat}',this.value)" style="flex:1"><span style="font-size:12px;color:var(--mu)">원/월</span></div>`).join('');
   document.getElementById('set-asset-cats').innerHTML=assetCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('asset','${c}')">✕</button></span>`).join('');
   document.getElementById('set-fixed-cats').innerHTML=fixedCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('fixed','${c}')">✕</button></span>`).join('');
   const smsEl=document.getElementById('set-month-start');
@@ -1857,6 +1913,103 @@ function doSignup(){
   document.getElementById('main-app').style.display='block';
   document.getElementById('header-user').textContent=`👤 ${id}`;
   err.textContent='';
+  // 신규 가입 후 온보딩
+  startOnboarding();
+}
+
+function doDemo(){
+  // 샘플 데이터 생성
+  const today=new Date();
+  const ym=`${today.getFullYear()}-${pad(today.getMonth()+1)}`;
+  const demoAccts=[
+    {id:1001,name:'우리은행 생활비',actype:'bank',bank:'우리은행',num:'1002-***-12345',init:2500000,include:true},
+    {id:1002,name:'신한카드',actype:'card',bank:'신한카드',num:'****-1234',init:0,include:true},
+    {id:1003,name:'데이트 통장',actype:'bank',bank:'카카오뱅크',num:'3333-***-5678',init:800000,include:false}
+  ];
+  const demoTxs=[
+    {id:2001,desc:'스타벅스',amount:5800,type:'expense',cat:'식비',date:`${ym}-${pad(Math.max(1,today.getDate()-1))}`,acctId:'1002',tags:['카페']},
+    {id:2002,desc:'지하철',amount:1550,type:'expense',cat:'교통',date:`${ym}-${pad(Math.max(1,today.getDate()-2))}`,acctId:'1001',tags:[]},
+    {id:2003,desc:'급여',amount:3200000,type:'income',cat:'급여',date:`${ym}-01`,acctId:'1001',tags:[]},
+    {id:2004,desc:'편의점',amount:4200,type:'expense',cat:'식비',date:`${ym}-${pad(Math.max(1,today.getDate()-3))}`,acctId:'1002',tags:[]},
+    {id:2005,desc:'영화 데이트',amount:32000,type:'expense',cat:'기타',date:`${ym}-${pad(Math.max(1,today.getDate()-5))}`,acctId:'1003',tags:['데이트']}
+  ];
+  const demoFixeds=[
+    {id:3001,name:'넷플릭스',amount:17000,day:5,cat:'구독'},
+    {id:3002,name:'월세',amount:650000,day:25,cat:'주거'},
+    {id:3003,name:'실손보험',amount:45000,day:15,cat:'보험'}
+  ];
+  localStorage.setItem('gb_accounts',JSON.stringify(demoAccts));
+  localStorage.setItem('gb_txs',JSON.stringify(demoTxs));
+  localStorage.setItem('gb_fixeds',JSON.stringify(demoFixeds));
+  sessionStorage.setItem('gb_loggedIn','demo');
+  sessionStorage.setItem('gb_demo','1');
+  location.reload();
+}
+
+// ── ONBOARDING ──
+let obStep=1;
+function startOnboarding(){
+  obStep=1;
+  renderOnboarding();
+  document.getElementById('onboarding-modal').style.display='flex';
+}
+function skipOnboarding(){
+  document.getElementById('onboarding-modal').style.display='none';
+  render();
+}
+function renderOnboarding(){
+  document.getElementById('ob-title').textContent=`👋 환영합니다! (${obStep}/3)`;
+  for(let i=1;i<=3;i++) document.getElementById('ob-step-'+i).style.display=i===obStep?'block':'none';
+  document.getElementById('ob-prev-btn').style.display=obStep>1?'inline-block':'none';
+  document.getElementById('ob-next-btn').textContent=obStep===3?'완료 ✓':'다음 ▶';
+  if(obStep===2){
+    const defaults={식비:300000,교통:100000,쇼핑:200000,구독:50000};
+    document.getElementById('ob-budgets').innerHTML=Object.entries(defaults).map(([cat,v])=>
+      `<div class="bsr"><span class="bn">${cat}</span><input id="ob-b-${cat}" type="number" placeholder="${v}" style="flex:1"><span style="font-size:12px;color:var(--mu)">원/월</span></div>`
+    ).join('');
+  }
+  if(obStep===3){
+    document.getElementById('ob-fixeds').innerHTML=[1,2,3].map(i=>`
+      <div class="mr" style="margin-bottom:8px">
+        <div class="mf"><label>이름 ${i}</label><input id="ob-fx-name-${i}" placeholder="예: 넷플릭스"></div>
+        <div class="mf"><label>금액</label><input id="ob-fx-amt-${i}" type="number" placeholder="17000"></div>
+        <div class="mf"><label>결제일</label><input id="ob-fx-day-${i}" type="number" min="1" max="31" placeholder="5"></div>
+      </div>`).join('');
+  }
+}
+function obPrev(){ if(obStep>1){saveObStep(); obStep--; renderOnboarding();} }
+function obNext(){
+  saveObStep();
+  if(obStep<3){ obStep++; renderOnboarding(); }
+  else { document.getElementById('onboarding-modal').style.display='none'; render(); }
+}
+function saveObStep(){
+  if(obStep===1){
+    const nm=document.getElementById('ob-acct-name').value.trim();
+    if(nm){
+      const init=parseInt(document.getElementById('ob-acct-init').value)||0;
+      accounts.push({id:Date.now(),name:nm,actype:'bank',bank:document.getElementById('ob-acct-bank').value.trim(),num:'',init,include:true});
+      save();
+    }
+  }
+  if(obStep===2){
+    ['식비','교통','쇼핑','구독'].forEach(cat=>{
+      const v=parseInt(document.getElementById('ob-b-'+cat)?.value);
+      if(v>0) budgets[cat]=v;
+    });
+    save();
+  }
+  if(obStep===3){
+    [1,2,3].forEach(i=>{
+      const nm=document.getElementById('ob-fx-name-'+i)?.value.trim();
+      const amt=parseInt(document.getElementById('ob-fx-amt-'+i)?.value);
+      const day=parseInt(document.getElementById('ob-fx-day-'+i)?.value);
+      if(nm&&amt>0&&day>=1&&day<=31){
+        fixeds.push({id:Date.now()+i,name:nm,amount:amt,day,cat:'기타'});
+      }
+    });
+    save();
+  }
 }
 
 function checkAuth(){
