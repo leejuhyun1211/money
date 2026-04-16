@@ -289,13 +289,13 @@ tr:hover td{background:var(--sf2);}
 <aside class="sidebar">
   <h1>💰 <span>가계부</span></h1>
   <nav class="side-nav">
-    <button class="nav-tab active" onclick="P('home',this)">📊 대시보드</button>
-    <button class="nav-tab" onclick="P('tx',this)">📝 거래 내역</button>
+    <button class="nav-tab active" onclick="P('home',this)">🏠 대시보드</button>
+    <button class="nav-tab" onclick="P('tx',this)">🔍 거래 내역</button>
     <button class="nav-tab" onclick="P('calendar',this)">📅 캘린더</button>
     <button class="nav-tab" onclick="P('yearly',this)">📈 연간현황</button>
-    <button class="nav-tab" onclick="P('assets',this)">💎 총 자산</button>
-    <button class="nav-tab" onclick="P('fixed',this)">🔁 고정 지출</button>
-    <button class="nav-tab" onclick="P('accounts',this)">🏦 통장 & 카드</button>
+    <button class="nav-tab" onclick="P('assets',this)">👜 총 자산</button>
+    <button class="nav-tab" onclick="P('fixed',this)">📋 고정 지출</button>
+    <button class="nav-tab" onclick="P('accounts',this)">💳 통장·카드</button>
     <button class="nav-tab" onclick="P('transfer',this)">💸 이체</button>
     <button class="nav-tab st" onclick="P('settings',this)">⚙ 설정</button>
   </nav>
@@ -317,7 +317,7 @@ tr:hover td{background:var(--sf2);}
   <!-- 인사말 + 오늘 날짜 뱃지 -->
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.2rem;flex-wrap:wrap">
     <h2 id="greeting" style="font-size:1.35rem;font-weight:700;margin:0">안녕하세요!</h2>
-    <span id="today-date" style="background:rgba(16,185,129,.1);color:var(--ac);padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500"></span>
+    <span id="today-date" style="background:rgba(16,185,129,.1);color:var(--ac);padding:5px 12px;border-radius:12px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px"></span>
   </div>
 
   <!-- 월 이동 -->
@@ -338,22 +338,22 @@ tr:hover td{background:var(--sf2);}
       <!-- 핵심 카드 2x2 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="card" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(16,185,129,.15);color:var(--ac);width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">💰</span><div class="label">이번달 남은 돈</div></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(16,185,129,.15);color:var(--ac);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">💳</span><div class="label">이번 달 남은 돈</div></div>
           <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
           <div id="d-left-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
         </div>
         <div class="card" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(249,115,22,.15);color:#f97316;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">📅</span><div class="label">3일 내 예정 고정지출</div></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(249,115,22,.15);color:#f97316;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">📅</span><div class="label">3일 내 예정 고정지출</div></div>
           <div class="amount" id="d-upcoming" style="color:#f97316">₩0</div>
           <div id="d-upcoming-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
         </div>
         <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(59,130,246,.15);color:#3b82f6;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">📊</span><div class="label">예산 사용률</div></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><div id="d-budget-donut" style="width:40px;height:40px;flex-shrink:0"></div><div class="label">예산 사용률</div></div>
           <div class="amount" id="d-budget-rate" style="color:#3b82f6">0%</div>
           <div id="d-budget-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
         </div>
         <div class="card" style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(168,85,247,.15);color:#a855f7;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">💳</span><div class="label">카드 결제 예정</div></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="background:rgba(168,85,247,.15);color:#a855f7;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">💳</span><div class="label">카드 결제 예정</div></div>
           <div class="amount" id="d-card" style="color:#a855f7">₩0</div>
           <div id="d-card-sub" style="font-size:11px;color:var(--mu);margin-top:4px"></div>
         </div>
@@ -361,16 +361,19 @@ tr:hover td{background:var(--sf2);}
 
       <!-- 오늘 남은 예산 -->
       <div class="box" style="margin:0">
-        <div class="box-hd"><h2>📱 오늘 남은 예산</h2></div>
-        <div class="box-bd">
-          <div style="font-size:2.2rem;font-weight:700;color:var(--ac);line-height:1" id="d-today-left">₩0</div>
-          <div style="font-size:12px;color:var(--mu);margin-top:6px" id="d-today-sub"></div>
+        <div class="box-hd"><h2><span style="background:rgba(16,185,129,.12);color:var(--ac);width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-right:6px;vertical-align:-7px">📅</span>오늘 남은 예산</h2></div>
+        <div class="box-bd" style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:2.2rem;font-weight:700;color:var(--ac);line-height:1" id="d-today-left">₩0</div>
+            <div style="font-size:12px;color:var(--mu);margin-top:6px" id="d-today-sub"></div>
+          </div>
+          <div style="background:rgba(16,185,129,.1);color:var(--ac);width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🧮</div>
         </div>
       </div>
 
       <!-- 예산 사용 현황 -->
       <div class="box" id="bgrid-box" style="margin:0">
-        <div class="box-hd"><h2>📊 예산 사용 현황</h2></div>
+        <div class="box-hd"><h2><span style="background:rgba(59,130,246,.12);color:#3b82f6;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-right:6px;vertical-align:-7px">📊</span>예산 사용 현황</h2></div>
         <div class="box-bd">
           <div class="bg" id="bgrid"></div>
           <div id="d-insight" style="margin-top:12px;padding:10px 14px;background:rgba(16,185,129,.08);border-radius:8px;font-size:13px;color:var(--ac);display:none">💡 <span id="d-insight-txt"></span></div>
@@ -1260,10 +1263,18 @@ function renderDashboard(ym,mTxs,mFix){
   const totalSpent=mTxs.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0);
   const bRate=totalBudget>0?Math.round(totalSpent/totalBudget*100):0;
   const dbr=document.getElementById('d-budget-rate');
-  if(dbr){dbr.textContent=bRate+'%';dbr.style.color=bRate>=100?'var(--ex)':bRate>=80?'var(--go)':'var(--ic)';}
+  if(dbr){dbr.textContent=bRate+'%';dbr.style.color='#3b82f6';}
+  // 예산 사용률 도넛
+  const dbd=document.getElementById('d-budget-donut');
+  if(dbd){
+    const R=16, C=2*Math.PI*R;
+    const pct=Math.min(100,bRate);
+    const len=(pct/100)*C;
+    dbd.innerHTML=`<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="${R}" fill="none" stroke="rgba(59,130,246,.15)" stroke-width="5"></circle><circle cx="20" cy="20" r="${R}" fill="none" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-dasharray="${len} ${C-len}" transform="rotate(-90 20 20)"></circle><text x="20" y="24" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#3b82f6">${bRate}%</text></svg>`;
+  }
   const overCat=txCats.filter(c=>c!=='저축').map(c=>({c,pct:budgets[c]?Math.round(mTxs.filter(t=>t.type==='expense'&&t.cat===c).reduce((s,t)=>s+t.amount,0)/budgets[c]*100):0})).sort((a,b)=>b.pct-a.pct)[0];
   const dbs=document.getElementById('d-budget-sub');
-  if(dbs)dbs.textContent=overCat&&overCat.pct>0?`${overCat.c} ${overCat.pct}% 사용`:'예산 미입력';
+  if(dbs)dbs.textContent=overCat&&overCat.pct>0?`${fmt(totalSpent)} / ${fmt(totalBudget)}`:'예산 미입력';
 
   const cardAccts=accounts.filter(a=>a.actype==='card'&&a.include!==false);
   const cardAmt=cardAccts.reduce((s,a)=>s+txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense'&&ymKey(t.date)===ym).reduce((ss,t)=>ss+t.amount,0),0);
@@ -1290,7 +1301,7 @@ function renderDashboard(ym,mTxs,mFix){
   const rec5el=document.getElementById('recent-5');
   if(rec5el){
     const rec=modeTxs([...txs].sort((a,b)=>b.date.localeCompare(a.date))).slice(0,5);
-    rec5el.innerHTML=rec.length?rec.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)"><div><div style="font-size:13px;font-weight:500">${t.desc}</div><div style="font-size:11px;color:var(--mu)">${t.cat} · ${t.date}</div></div><span style="font-weight:600;color:${t.type==='income'?'var(--ic)':'var(--ex)'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span></div>`).join('')
+    rec5el.innerHTML=rec.length?rec.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)"><div style="background:${catColor(t.cat)}22;color:${catColor(t.cat)};width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${catIcon(t.cat)||'💸'}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${t.desc}</div><div style="font-size:11px;color:var(--mu)">${t.date.slice(5).replace('-','.')} · ${t.cat}</div></div><span style="font-weight:600;font-size:13px;color:${t.type==='income'?'var(--ac)':'var(--ex)'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span></div>`).join('')
     :'<div style="text-align:center;padding:1.5rem;color:var(--mu);font-size:13px">📭 거래 없음</div>';
   }
 
@@ -2334,7 +2345,7 @@ function render(){
   if(tdEl){
     const t=new Date();
     const days=['일','월','화','수','목','금','토'];
-    tdEl.textContent=`오늘은 ${t.getMonth()+1}월 ${t.getDate()}일 (${days[t.getDay()]})`;
+    tdEl.innerHTML=`📅 오늘 ${t.getMonth()+1}월 ${t.getDate()}일 (${days[t.getDay()]})`;
   }
   const ym=`${hY}-${pad(hM+1)}`;
   document.getElementById('h-title').textContent=`${hY}년 ${hM+1}월`;
@@ -2375,13 +2386,20 @@ function render(){
   // 대시보드 렌더
   renderDashboard(ym, mTxs, mFix);
 
-  // 예산 현황
+  // 예산 현황 - 각 카테고리 앞에 아이콘 원
   document.getElementById('bgrid').innerHTML=txCats.map(cat=>{
     const b=budgets[cat]||0; if(!b)return'';
     const spent=mTxs.filter(t=>t.type==='expense'&&t.cat===cat).reduce((s,t)=>s+t.amount,0);
     const pct=Math.min(100,Math.round(spent/b*100));
-    const cls=pct>=100?'ov':pct>=80?'warn':'ok';
-    return`<div class="bi"><div class="cat">${catIcon(cat)} ${cat}</div><div class="bar"><div class="bf ${cls}" style="width:${pct}%"></div></div><div class="bnum"><span class="sp">${fmt(spent)}</span><span>/ ${fmt(b)} (${pct}%)</span></div></div>`;
+    const barColor=pct>=100?'var(--ex)':pct>=80?'#f59e0b':catColor(cat);
+    return`<div style="display:flex;align-items:center;gap:12px;padding:8px 0">
+      <div style="background:${catColor(cat)}22;color:${catColor(cat)};width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${catIcon(cat)||'💸'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx);font-weight:500">${cat}</span><span style="color:${barColor};font-weight:600">${pct}%</span></div>
+        <div style="background:var(--sf2);height:6px;border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="background:${barColor};height:100%;width:${pct}%;transition:width .3s"></div></div>
+        <div style="font-size:11px;color:var(--mu)">${fmt(spent)} / ${fmt(b)}</div>
+      </div>
+    </div>`;
   }).join('')||'<div style="color:var(--mu);font-size:13px">설정에서 예산을 입력하세요</div>';
 
   // 거래 내역 테이블 (기간 + 검색 + 필터)
