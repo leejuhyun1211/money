@@ -117,6 +117,8 @@ tr:hover td{background:var(--sf2);}
   .fx-cards{grid-template-columns:repeat(2,1fr) !important;}
 }
 .tbtn.active{background:rgba(16,185,129,.1);color:var(--ac);border-color:var(--ac);}
+.dash-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.dash-card{transition:background .2s,border-color .2s;}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
 .ai-card,.fi{background:var(--sf2);border-radius:8px;padding:14px;}
@@ -331,24 +333,24 @@ tr:hover td{background:var(--sf2);}
     <!-- 좌측 -->
     <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
       <!-- 핵심 카드 2x2 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="card" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);display:flex;align-items:center;gap:14px">
-          <span style="background:rgba(16,185,129,.15);color:var(--ac);width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">💳</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="dash-cards">
+        <div class="card dash-card" data-card="left" style="display:flex;align-items:center;gap:14px">
+          <span class="dash-icon">💳</span>
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:3px">이번 달 남은 돈</div>
-            <div class="amount" id="d-left" style="color:var(--ac)">₩0</div>
+            <div class="amount dash-amt" id="d-left">₩0</div>
             <span id="d-left-sub" style="display:none"></span>
           </div>
         </div>
-        <div class="card" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.25);display:flex;align-items:center;gap:14px">
-          <span style="background:rgba(249,115,22,.15);color:#f97316;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📅</span>
+        <div class="card dash-card" data-card="upcoming" style="display:flex;align-items:center;gap:14px">
+          <span class="dash-icon">📅</span>
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:3px">3일 내 예정 고정지출</div>
-            <div class="amount" id="d-upcoming" style="color:#f97316">₩0</div>
+            <div class="amount dash-amt" id="d-upcoming">₩0</div>
             <span id="d-upcoming-sub" style="display:none"></span>
           </div>
         </div>
-        <div class="card" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;gap:14px">
+        <div class="card dash-card" data-card="budget" style="display:flex;align-items:center;gap:14px">
           <div id="d-budget-donut" style="width:52px;height:52px;flex-shrink:0"></div>
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:4px">예산 사용률</div>
@@ -356,11 +358,11 @@ tr:hover td{background:var(--sf2);}
             <span id="d-budget-rate" style="display:none"></span>
           </div>
         </div>
-        <div class="card" style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25);display:flex;align-items:center;gap:14px">
-          <span style="background:rgba(168,85,247,.15);color:#a855f7;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">💳</span>
+        <div class="card dash-card" data-card="card" style="display:flex;align-items:center;gap:14px">
+          <span class="dash-icon">💳</span>
           <div style="flex:1;min-width:0">
             <div class="label" style="margin-bottom:3px">카드 결제 예정</div>
-            <div class="amount" id="d-card" style="color:#a855f7">₩0</div>
+            <div class="amount dash-amt" id="d-card">₩0</div>
             <span id="d-card-sub" style="display:none"></span>
           </div>
         </div>
@@ -368,7 +370,7 @@ tr:hover td{background:var(--sf2);}
 
       <!-- 예산 사용 현황 -->
       <div class="box" id="bgrid-box" style="margin:0">
-        <div class="box-hd"><h2><span style="background:rgba(59,130,246,.12);color:#3b82f6;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-right:6px;vertical-align:-7px">📊</span>예산 사용 현황</h2></div>
+        <div class="box-hd"><h2 style="display:flex;align-items:center;gap:8px"><span style="background:rgba(59,130,246,.12);color:#3b82f6;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">📊</span>예산 사용 현황</h2></div>
         <div class="box-bd">
           <div class="bg" id="bgrid"></div>
           <div id="d-insight" style="margin-top:12px;padding:10px 14px;background:rgba(16,185,129,.08);border-radius:8px;font-size:13px;color:var(--ac);display:none">💡 <span id="d-insight-txt"></span></div>
@@ -395,7 +397,7 @@ tr:hover td{background:var(--sf2);}
 
       <!-- 오늘 남은 예산 -->
       <div class="box" style="margin:0">
-        <div class="box-hd"><h2><span style="background:rgba(16,185,129,.12);color:var(--ac);width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;margin-right:6px;vertical-align:-7px">📅</span>오늘 남은 예산</h2></div>
+        <div class="box-hd"><h2 style="display:flex;align-items:center;gap:8px"><span style="background:rgba(16,185,129,.12);color:var(--ac);width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">📅</span>오늘 남은 예산</h2></div>
         <div class="box-bd" style="display:flex;justify-content:space-between;align-items:center">
           <div>
             <div style="font-size:2.2rem;font-weight:700;color:var(--ac);line-height:1" id="d-today-left">₩0</div>
@@ -986,11 +988,21 @@ tr:hover td{background:var(--sf2);}
     <div class="atr"><input id="new-fixed-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('fixed')"><button class="btn btn-pu btn-sm" onclick="addCat('fixed')">+ 추가</button></div>
   </div>
   <div class="ss" data-sec="app" style="display:none"><h3>앱 설정</h3>
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
       <div class="mf" style="flex:1;min-width:160px"><label>월 시작일 (1~31)</label><input id="set-month-start" type="number" min="1" max="31" onchange="updSetting('monthStartDay',this.value)"></div>
       <div class="mf" style="flex:1;min-width:160px"><label>기본 통장</label><select id="set-default-acct" onchange="updSetting('defaultAcctId',this.value)"><option value="">선택 안 함</option></select></div>
     </div>
-    <div style="font-size:11px;color:var(--mu);margin-top:6px">기본 통장을 설정하면 빠른 거래 추가 시 자동으로 선택됩니다.</div>
+    <div style="font-size:11px;color:var(--mu);margin-bottom:16px">기본 통장을 설정하면 빠른 거래 추가 시 자동으로 선택됩니다.</div>
+
+    <div style="border-top:1px solid var(--bd);padding-top:14px">
+      <label style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:8px;display:block">대시보드 카드 색상</label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border-radius:8px"><input type="color" id="set-card-left" onchange="updCardColor('left',this.value)" style="width:40px;height:36px;padding:0;border:none;cursor:pointer"><span style="font-size:13px">이번 달 남은 돈</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border-radius:8px"><input type="color" id="set-card-upcoming" onchange="updCardColor('upcoming',this.value)" style="width:40px;height:36px;padding:0;border:none;cursor:pointer"><span style="font-size:13px">3일 내 예정 고정지출</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border-radius:8px"><input type="color" id="set-card-budget" onchange="updCardColor('budget',this.value)" style="width:40px;height:36px;padding:0;border:none;cursor:pointer"><span style="font-size:13px">예산 사용률</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border-radius:8px"><input type="color" id="set-card-card" onchange="updCardColor('card',this.value)" style="width:40px;height:36px;padding:0;border:none;cursor:pointer"><span style="font-size:13px">카드 결제 예정</span></div>
+      </div>
+    </div>
   </div>
   <div class="ss" data-sec="data" style="display:none"><h3>데이터 관리</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1187,6 +1199,7 @@ let assetCats = JSON.parse(localStorage.getItem('gb_assetCats') || '["예금/적
 let fixedCats = JSON.parse(localStorage.getItem('gb_fixedCats') || '["구독","보험","통신","주거","교육","기타"]');
 let budgets   = JSON.parse(localStorage.getItem('gb_budgets')   || '{"식비":300000,"교통":100000,"쇼핑":200000,"의료":100000,"구독":50000,"저축":500000,"기타":100000}');
 let settings  = JSON.parse(localStorage.getItem('gb_settings')  || '{"monthStartDay":1,"defaultAcctId":""}');
+if(!settings.cardColors) settings.cardColors={left:'#10b981',upcoming:'#f97316',budget:'#3b82f6',card:'#a855f7'};
 
 const _now = new Date();
 let hY = _now.getFullYear(), hM = _now.getMonth();
@@ -1233,8 +1246,10 @@ function setQType(t){
   qType=t;
   const eBtn=document.getElementById('qt-exp');
   const iBtn=document.getElementById('qt-inc');
-  if(eBtn)eBtn.style.cssText=t==='expense'?'':'background:var(--sf2);border:1px solid var(--bd);color:var(--mu);min-width:54px';
-  if(iBtn)iBtn.style.cssText=t==='income'?'background:var(--ic);border:none;color:#111;min-width:54px':'background:var(--sf2);border:1px solid var(--bd);color:var(--mu);min-width:54px';
+  const activeCss='flex:1;background:var(--ac);color:#fff;border:none;border-radius:6px;padding:8px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500';
+  const inactiveCss='flex:1;background:transparent;color:var(--mu);border:none;border-radius:6px;padding:8px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500';
+  if(eBtn) eBtn.style.cssText=t==='expense'?activeCss:inactiveCss;
+  if(iBtn) iBtn.style.cssText=t==='income'?activeCss:inactiveCss;
 }
 function toggleDetail(){
   const d=document.getElementById('detail-fields');
@@ -1598,6 +1613,29 @@ function openAssetForm(type){
   const ts=document.getElementById('a-type'); if(ts) ts.value=type;
   const nm=document.getElementById('a-name'); if(nm) nm.focus();
   box?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function hexToRgba(hex,a){
+  const h=hex.replace('#','');
+  const r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function applyDashCardColors(){
+  const cc=settings.cardColors||{left:'#10b981',upcoming:'#f97316',budget:'#3b82f6',card:'#a855f7'};
+  document.querySelectorAll('.dash-card').forEach(el=>{
+    const k=el.dataset.card;
+    const c=cc[k]||'#10b981';
+    el.style.background=hexToRgba(c,.08);
+    el.style.borderColor=hexToRgba(c,.25);
+    const icon=el.querySelector('.dash-icon');
+    if(icon){icon.style.background=hexToRgba(c,.15); icon.style.color=c;}
+    const amt=el.querySelector('.dash-amt');
+    if(amt) amt.style.color=c;
+  });
+}
+function updCardColor(key,val){
+  if(!settings.cardColors) settings.cardColors={};
+  settings.cardColors[key]=val;
+  save(); applyDashCardColors();
 }
 function addTxInline(){
   const amt=parseInt(document.getElementById('f-amt').value);
@@ -2390,6 +2428,8 @@ function render(){
   const bal=inc-exp-sav-mFix;
   document.getElementById('s-bal') && (document.getElementById('s-bal').textContent=(bal<0?'-':'')+fmt(bal));
 
+  // 대시보드 카드 색상
+  applyDashCardColors();
   // 대시보드 렌더
   renderDashboard(ym, mTxs, mFix);
 
@@ -2936,6 +2976,8 @@ function render(){
     sdaEl.innerHTML='<option value="">선택 안 함</option>'+accounts.map(a=>`<option value="${a.id}">${a.actype==='card'?'💳':'🏦'}${a.name}</option>`).join('');
     sdaEl.value=settings.defaultAcctId||'';
   }
+  const cc=settings.cardColors||{};
+  ['left','upcoming','budget','card'].forEach(k=>{const el=document.getElementById('set-card-'+k); if(el) el.value=cc[k]||'#10b981';});
 }
 
 function doLogout(){
