@@ -650,6 +650,13 @@ tr:hover td{background:var(--sf2);}
     <div class="tl" id="set-fixed-cats"></div>
     <div class="atr"><input id="new-fixed-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('fixed')"><button class="btn btn-pu btn-sm" onclick="addCat('fixed')">+ 추가</button></div>
   </div>
+  <div class="ss"><h3>앱 설정</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="mf" style="flex:1;min-width:160px"><label>월 시작일 (1~31)</label><input id="set-month-start" type="number" min="1" max="31" onchange="updSetting('monthStartDay',this.value)"></div>
+      <div class="mf" style="flex:1;min-width:160px"><label>기본 통장</label><select id="set-default-acct" onchange="updSetting('defaultAcctId',this.value)"><option value="">선택 안 함</option></select></div>
+    </div>
+    <div style="font-size:11px;color:var(--mu);margin-top:6px">기본 통장을 설정하면 빠른 거래 추가 시 자동으로 선택됩니다.</div>
+  </div>
   <div class="ss"><h3>계정</h3>
     <button class="btn btn-gh" onclick="doLogout()" style="font-size:13px">🚪 로그아웃</button>
   </div>
@@ -742,6 +749,7 @@ let txCats    = JSON.parse(localStorage.getItem('gb_txCats')    || '["식비","�
 let assetCats = JSON.parse(localStorage.getItem('gb_assetCats') || '["예금/적금","현금","투자/주식","부동산","대출","카드부채","기타"]');
 let fixedCats = JSON.parse(localStorage.getItem('gb_fixedCats') || '["구독","보험","통신","주거","교육","기타"]');
 let budgets   = JSON.parse(localStorage.getItem('gb_budgets')   || '{"식비":300000,"교통":100000,"쇼핑":200000,"의료":100000,"구독":50000,"저축":500000,"기타":100000}');
+let settings  = JSON.parse(localStorage.getItem('gb_settings')  || '{"monthStartDay":1,"defaultAcctId":""}');
 
 const _now = new Date();
 let hY = _now.getFullYear(), hM = _now.getMonth();
@@ -909,6 +917,7 @@ function save(){
   localStorage.setItem('gb_assetCats', JSON.stringify(assetCats));
   localStorage.setItem('gb_fixedCats', JSON.stringify(fixedCats));
   localStorage.setItem('gb_budgets',   JSON.stringify(budgets));
+  localStorage.setItem('gb_settings',  JSON.stringify(settings));
 }
 
 const fmt  = n => '₩' + Math.abs(n).toLocaleString('ko-KR');
@@ -941,7 +950,12 @@ function refreshSelects(){
   const acctOpts='<option value="">없음</option>'+accounts.map(a=>`<option value="${a.id}">${a.name}${a.include===false?' (공유)':''}</option>`).join('');
   ['f-acct','c-acct','et-acct'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
-    const v=el.value; el.innerHTML=acctOpts; el.value=v;
+    const v=el.value; el.innerHTML=acctOpts;
+    if((id==='f-acct'||id==='c-acct') && !v && settings.defaultAcctId && accounts.find(a=>String(a.id)===String(settings.defaultAcctId))){
+      el.value=settings.defaultAcctId;
+    } else {
+      el.value=v;
+    }
   });
   // 이체 셀렉트
   const trOpts=accounts.map(a=>`<option value="${a.id}">${a.name}${a.include===false?' 💑':' 👤'}</option>`).join('');
@@ -974,6 +988,15 @@ function delCat(type,val){
   save(); render();
 }
 function updBudget(cat,val){budgets[cat]=parseInt(val)||0; save();}
+function updSetting(key,val){
+  if(key==='monthStartDay'){
+    const n=parseInt(val)||1;
+    settings.monthStartDay=Math.min(31,Math.max(1,n));
+  } else {
+    settings[key]=val;
+  }
+  save(); render();
+}
 
 // ── TX ──
 function addTx(src){
@@ -1630,6 +1653,13 @@ function render(){
   document.getElementById('set-budgets').innerHTML=txCats.map(cat=>`<div class="bsr"><span class="bn">${cat}</span><input type="number" placeholder="예산" value="${budgets[cat]||''}" oninput="updBudget('${cat}',this.value)" style="flex:1"><span style="font-size:12px;color:var(--mu)">원/월</span></div>`).join('');
   document.getElementById('set-asset-cats').innerHTML=assetCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('asset','${c}')">✕</button></span>`).join('');
   document.getElementById('set-fixed-cats').innerHTML=fixedCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('fixed','${c}')">✕</button></span>`).join('');
+  const smsEl=document.getElementById('set-month-start');
+  if(smsEl) smsEl.value=settings.monthStartDay||1;
+  const sdaEl=document.getElementById('set-default-acct');
+  if(sdaEl){
+    sdaEl.innerHTML='<option value="">선택 안 함</option>'+accounts.map(a=>`<option value="${a.id}">${a.actype==='card'?'💳':'🏦'}${a.name}</option>`).join('');
+    sdaEl.value=settings.defaultAcctId||'';
+  }
 }
 
 function doLogout(){
