@@ -68,7 +68,8 @@ select option{background:#1a1a1a;}
 .btn:hover{opacity:.85;}
 .btn-blue{background:var(--ac);color:#fff;}.btn-gold{background:var(--go);color:#111;}
 .btn-pu{background:var(--pu);color:#fff;}.btn-sm{padding:6px 12px;font-size:12px;}
-.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+.bg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px;}
+@media(max-width:600px){.bg{grid-template-columns:1fr;}}
 .bi{background:var(--sf2);border-radius:8px;padding:12px;}
 .bi .cat{font-size:12px;font-weight:500;margin-bottom:8px;}
 .bar{height:4px;background:var(--bd);border-radius:2px;overflow:hidden;margin-bottom:6px;}
