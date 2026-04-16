@@ -110,7 +110,9 @@ tr:hover td{background:var(--sf2);}
 .pg.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600;}
 .pg:disabled{opacity:.3;cursor:not-allowed;}
 @media(max-width:600px){.fab{bottom:16px;right:16px;width:52px;height:52px;}}
-@media(max-width:900px){.dash-grid,.cal-grid-split{grid-template-columns:1fr !important;}}
+@media(max-width:900px){.dash-grid,.cal-grid-split,.yr-grid{grid-template-columns:1fr !important;}
+  #page-yearly .cards,#page-yearly > div[style*="repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr) !important;}
+}
 .al{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
 .ai-card,.fi{background:var(--sf2);border-radius:8px;padding:14px;}
@@ -543,34 +545,71 @@ tr:hover td{background:var(--sf2);}
 
 <!-- 연간현황 -->
 <div class="page" id="page-yearly">
-  <div class="cal-nav" style="margin-bottom:1rem">
-    <div class="cnb">
-      <button onclick="yMv(-1)">◀</button>
-      <button onclick="yMv(0)">올해</button>
-      <button onclick="yMv(1)">▶</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
+    <h2 style="font-size:1.35rem;font-weight:700;margin:0">연간현황 <span style="font-size:13px;font-weight:400;color:var(--mu);margin-left:8px">연간 수입과 지출 흐름을 확인하고 소비 패턴을 파악하세요.</span></h2>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button onclick="yMv(-1)" class="tbtn">◀</button>
+      <h3 id="yr-title" style="font-size:15px;font-weight:700;margin:0;padding:0 8px"></h3>
+      <button onclick="yMv(1)" class="tbtn">▶</button>
+      <button onclick="yMv(0)" class="tbtn" style="margin-left:6px">올해</button>
     </div>
-    <h2 id="yr-title" style="font-size:16px;font-weight:700"></h2>
-    <div style="width:100px"></div>
   </div>
-  <div class="cards">
-    <div class="card c-ic"><div class="label">연간 수입</div><div class="amount" id="yr-inc">₩0</div></div>
-    <div class="card c-ex"><div class="label">연간 지출</div><div class="amount" id="yr-exp">₩0</div></div>
-    <div class="card c-sav"><div class="label">연간 저축</div><div class="amount" id="yr-sav">₩0</div></div>
-    <div class="card c-bal"><div class="label">연간 잔액</div><div class="amount" id="yr-bal">₩0</div></div>
+  <!-- 4카드 -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(16,185,129,.12);color:var(--ac);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">💰</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">연간 수입</div><div id="yr-inc" style="font-size:1.2rem;font-weight:700;color:var(--ac)">₩0</div><div id="yr-inc-sub" style="font-size:10px;color:var(--mu);margin-top:2px"></div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(249,115,22,.12);color:#f97316;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📤</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">연간 지출</div><div id="yr-exp" style="font-size:1.2rem;font-weight:700;color:#f97316">₩0</div><div id="yr-exp-sub" style="font-size:10px;color:var(--mu);margin-top:2px"></div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(236,72,153,.12);color:#ec4899;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">🐷</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">연간 저축</div><div id="yr-sav" style="font-size:1.2rem;font-weight:700;color:#ec4899">₩0</div></div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);padding:14px 16px;border-radius:10px;display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(59,130,246,.12);color:#3b82f6;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+      <div style="min-width:0"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">저축률</div><div id="yr-sav-rate" style="font-size:1.2rem;font-weight:700;color:#3b82f6">0%</div><div id="yr-bal" style="display:none"></div></div>
+    </div>
   </div>
-  <div class="box" style="margin-bottom:1rem">
-    <div class="box-hd"><h2>월별 수입/지출</h2></div>
-    <div class="box-bd">
-      <div class="yb" id="yr-chart"></div>
-      <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--mu)">
-        <span><span style="display:inline-block;width:10px;height:10px;background:var(--ic);border-radius:2px;margin-right:4px"></span>수입</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:var(--ex);border-radius:2px;margin-right:4px"></span>지출</span>
+
+  <!-- 2열: 월별 차트 + 카테고리 도넛 -->
+  <div class="yr-grid" style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+    <div class="box" style="margin:0">
+      <div class="box-hd" style="justify-content:space-between"><h2>월별 수입·지출</h2><span style="font-size:11px;color:var(--mu)">💡 월 클릭 시 해당 월로 이동</span></div>
+      <div class="box-bd">
+        <div class="yb" id="yr-chart"></div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--mu)">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--ac);border-radius:2px;margin-right:4px"></span>수입</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#f97316;border-radius:2px;margin-right:4px"></span>지출</span>
+        </div>
       </div>
-      <div id="yr-insights" style="margin-top:14px;padding:12px 14px;background:rgba(96,165,250,.06);border-radius:8px;font-size:13px;color:var(--tx);line-height:1.9;display:none"></div>
+    </div>
+    <div class="box" style="margin:0">
+      <div class="box-hd"><h2>대표 카테고리 비중</h2></div>
+      <div class="box-bd">
+        <div id="yr-donut" style="display:flex;gap:14px;align-items:center;justify-content:center"></div>
+      </div>
     </div>
   </div>
-  <div class="box" style="overflow-x:auto">
-    <div style="min-width:900px"><table class="yt" id="yr-table"></table></div>
+
+  <!-- 2열: 카테고리 누적 + 인사이트 -->
+  <div class="yr-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px">
+    <div class="box" style="margin:0">
+      <div class="box-hd"><h2>카테고리별 누적 지출</h2></div>
+      <div class="box-bd"><div id="yr-cat-bars"></div></div>
+    </div>
+    <div class="box" style="margin:0">
+      <div class="box-hd"><h2>💡 자동 해석 · 인사이트</h2><span id="yr-ins-year" style="background:rgba(16,185,129,.1);color:var(--ac);padding:3px 10px;border-radius:10px;font-size:11px"></span></div>
+      <div class="box-bd"><div id="yr-insights" style="font-size:13px;line-height:1.9"></div></div>
+    </div>
+  </div>
+
+  <!-- 월별 표 -->
+  <div class="box" style="overflow-x:auto;margin:0">
+    <div class="box-hd"><h2>월별 상세</h2></div>
+    <div style="min-width:900px;padding:0 1.2rem 1rem"><table class="yt" id="yr-table"></table></div>
   </div>
 </div>
 
@@ -1884,7 +1923,9 @@ function renderCal(){
 
 // ── YEARLY ──
 function renderYearly(){
-  document.getElementById('yr-title').textContent=`${yY}년 연간현황`;
+  document.getElementById('yr-title').textContent=`${yY}년`;
+  const yrYearSpan=document.getElementById('yr-ins-year');
+  if(yrYearSpan) yrYearSpan.textContent=`${yY}년 분석`;
   const mos=Array.from({length:12},(_,i)=>i+1);
   const yTxs=modeTxs(txs.filter(t=>t.date&&t.date.startsWith(String(yY))));
   const allFix=appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0)*12;
@@ -1895,7 +1936,64 @@ function renderYearly(){
   document.getElementById('yr-inc').textContent=fmt(yI);
   document.getElementById('yr-exp').textContent=fmt(yE);
   document.getElementById('yr-sav').textContent=fmt(yS);
-  document.getElementById('yr-bal').textContent=(yB<0?'-':'')+fmt(yB);
+  // 월 평균
+  const incSubEl=document.getElementById('yr-inc-sub');
+  const expSubEl=document.getElementById('yr-exp-sub');
+  if(incSubEl) incSubEl.textContent=`월 평균 ${fmt(Math.round(yI/12))}`;
+  if(expSubEl) expSubEl.textContent=`월 평균 ${fmt(Math.round(yE/12))}`;
+  // 저축률
+  const savRate=yI>0?Math.round(yS/yI*1000)/10:0;
+  const savRateEl=document.getElementById('yr-sav-rate');
+  if(savRateEl) savRateEl.textContent=savRate+'%';
+  const yBEl=document.getElementById('yr-bal');
+  if(yBEl) yBEl.textContent=(yB<0?'-':'')+fmt(yB);
+
+  // 카테고리별 누적 지출 (도넛 + 바)
+  const catSums={};
+  yTxs.filter(t=>t.type==='expense'&&t.cat!=='저축').forEach(t=>{catSums[t.cat]=(catSums[t.cat]||0)+t.amount;});
+  if(appMode!=='date') fixeds.forEach(f=>{catSums[f.cat]=(catSums[f.cat]||0)+f.amount*12;});
+  const catEntries=Object.entries(catSums).sort((a,b)=>b[1]-a[1]);
+  const catTotal=catEntries.reduce((s,[,v])=>s+v,0);
+
+  // 도넛 차트 (SVG)
+  const donutEl=document.getElementById('yr-donut');
+  if(donutEl){
+    const R=40, C=2*Math.PI*R, top6=catEntries.slice(0,6);
+    let offset=0;
+    const segs=top6.map(([c,v])=>{
+      const len=catTotal>0?(v/catTotal)*C:0;
+      const dash=`${len} ${C-len}`;
+      const strokeOffset=-offset;
+      offset+=len;
+      return{c,v,pct:catTotal>0?Math.round(v/catTotal*1000)/10:0,dash,strokeOffset,color:catColor(c)};
+    });
+    const svg=`<svg viewBox="0 0 100 100" width="140" height="140" style="flex-shrink:0">
+      <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--sf2)" stroke-width="16"></circle>
+      ${segs.map(s=>`<circle cx="50" cy="50" r="${R}" fill="none" stroke="${s.color}" stroke-width="16" stroke-dasharray="${s.dash}" stroke-dashoffset="${s.strokeOffset}" transform="rotate(-90 50 50)"></circle>`).join('')}
+      <text x="50" y="46" text-anchor="middle" style="font-size:8px;fill:var(--mu)">연간 지출</text>
+      <text x="50" y="58" text-anchor="middle" style="font-size:9px;font-weight:700;fill:var(--tx)">${fmt(catTotal).replace('₩','')}</text>
+    </svg>`;
+    const legend=`<div style="flex:1;min-width:0;font-size:12px">${segs.map(s=>`<div style="display:flex;align-items:center;gap:6px;padding:3px 0"><span style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></span><span style="color:var(--tx);min-width:45px">${catIcon(s.c)} ${s.c}</span><span style="color:var(--mu);margin-left:auto">${s.pct}%</span><span style="color:var(--tx);margin-left:8px">${fmt(s.v)}</span></div>`).join('')}</div>`;
+    donutEl.innerHTML=svg+legend;
+  }
+
+  // 카테고리별 누적 바
+  const catBarsEl=document.getElementById('yr-cat-bars');
+  if(catBarsEl){
+    const top8=catEntries.slice(0,8);
+    const mx2=top8[0]?.[1]||1;
+    catBarsEl.innerHTML=top8.map(([c,v])=>{
+      const w=Math.round(v/mx2*100);
+      const pct=catTotal>0?Math.round(v/catTotal*1000)/10:0;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+        <div style="background:${catColor(c)}22;color:${catColor(c)};width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${catIcon(c)||'💸'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--tx)">${c}</span><span style="color:var(--mu)">${fmt(v)} · ${pct}%</span></div>
+          <div style="background:var(--sf2);height:6px;border-radius:3px;overflow:hidden"><div style="background:${catColor(c)};height:100%;width:${w}%;transition:width .3s"></div></div>
+        </div>
+      </div>`;
+    }).join('')||'<div style="color:var(--mu);font-size:13px;text-align:center;padding:1rem">지출 기록이 없습니다</div>';
+  }
   const md=mos.map(m=>{const ym=`${yY}-${pad(m)}`;const mt=modeTxs(txs.filter(t=>ymKey(t.date)===ym));return{i:mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),e:mt.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0)+(appMode==='date'?0:fixeds.reduce((s,f)=>s+f.amount,0))};});
   const mx=Math.max(...md.map(d=>Math.max(d.i,d.e)),1);
   document.getElementById('yr-chart').innerHTML=md.map((d,i)=>`<div class="ybg" style="cursor:pointer" onclick="goMonth(${i+1})" title="${i+1}월 거래내역 보기"><div class="ybs" style="height:100px"><div class="ybr" style="background:var(--ic);height:${Math.round(d.i/mx*100)}px"></div><div class="ybr" style="background:var(--ex);height:${Math.round(d.e/mx*100)}px"></div></div><div class="ybl">${i+1}월</div></div>`).join('');
