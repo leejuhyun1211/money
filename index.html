@@ -239,7 +239,7 @@ tr:hover td{background:var(--sf2);}
   <div class="cal-nav" style="margin-bottom:1rem">
     <div class="cnb">
       <button onclick="hMv(-1)">◀</button>
-      <button onclick="hMv(0)">이번달</button>
+      <select id="h-month-pick" onchange="hPickMonth(this.value)" style="padding:6px 10px;border-radius:8px;font-size:13px;background:var(--sf2);border:1px solid var(--bd);color:var(--tx);font-family:var(--font);cursor:pointer"></select>
       <button onclick="hMv(1)">▶</button>
     </div>
     <h2 id="h-title"></h2>
@@ -251,6 +251,10 @@ tr:hover td{background:var(--sf2);}
     <div class="card c-sav"><div class="label">저축</div><div class="amount" id="s-sav">₩0</div></div>
     <div class="card c-pu"><div class="label">고정지출</div><div class="amount" id="s-fix">₩0</div></div>
     <div class="card c-bal"><div class="label">잔액</div><div class="amount" id="s-bal">₩0</div></div>
+  </div>
+  <div class="box">
+    <div class="box-hd"><h2>카테고리별 예산</h2></div>
+    <div class="box-bd"><div class="bg" id="bgrid"></div></div>
   </div>
   <div class="box">
     <div class="box-hd"><h2>거래 추가</h2></div>
@@ -265,10 +269,6 @@ tr:hover td{background:var(--sf2);}
         <button class="btn btn-blue" onclick="addTx('h')">추가</button>
       </div>
     </div>
-  </div>
-  <div class="box">
-    <div class="box-hd"><h2>카테고리별 예산</h2></div>
-    <div class="box-bd"><div class="bg" id="bgrid"></div></div>
   </div>
   <div class="box">
     <div class="box-hd">
@@ -803,6 +803,11 @@ function delTransfer(id){
 
 // ── NAV HELPERS ──
 function hMv(d){if(d===0){hY=_now.getFullYear();hM=_now.getMonth();}else{hM+=d;if(hM>11){hM=0;hY++;}else if(hM<0){hM=11;hY--;}} render();}
+function hPickMonth(val){
+  const [y,m]=val.split('-');
+  hY=parseInt(y); hM=parseInt(m);
+  render();
+}
 function cMv(d){if(d===0){cY=_now.getFullYear();cM=_now.getMonth();selDate=null;}else{cM+=d;if(cM>11){cM=0;cY++;}else if(cM<0){cM=11;cY--;};selDate=null;} render();}
 function yMv(d){if(d===0)yY=_now.getFullYear();else yY+=d; render();}
 
@@ -1012,6 +1017,20 @@ function render(){
   refreshSelects();
   const ym=`${hY}-${pad(hM+1)}`;
   document.getElementById('h-title').textContent=`${hY}년 ${hM+1}월`;
+  // 월 선택 드롭다운 업데이트 (현재월 ±12개월)
+  const mp=document.getElementById('h-month-pick');
+  if(mp){
+    const cur=`${hY}-${hM}`;
+    let opts='';
+    for(let y=hY-1;y<=hY+1;y++){
+      for(let m=0;m<12;m++){
+        const val=`${y}-${m}`;
+        const lbl=`${y}년 ${m+1}월`;
+        opts+=`<option value="${val}"${val===cur?' selected':''}>${lbl}</option>`;
+      }
+    }
+    mp.innerHTML=opts;
+  }
 
   // 모드 표시 업데이트
   const isDate=appMode==='date';
