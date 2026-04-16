@@ -951,12 +951,12 @@ function renderDashboard(ym,mTxs,mFix){
   const dus=document.getElementById('d-upcoming-sub');
   if(dus)dus.textContent=upcoming.length>0?upcoming.map(f=>`${f.day}일 ${f.name}`).join(' · '):'이번 주 예정 없음';
 
-  const totalBudget=Object.values(budgets).reduce((s,v)=>s+v,0);
-  const totalSpent=mTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const totalBudget=Object.entries(budgets).filter(([c])=>c!=='저축').reduce((s,[,v])=>s+v,0);
+  const totalSpent=mTxs.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0);
   const bRate=totalBudget>0?Math.round(totalSpent/totalBudget*100):0;
   const dbr=document.getElementById('d-budget-rate');
   if(dbr){dbr.textContent=bRate+'%';dbr.style.color=bRate>=100?'var(--ex)':bRate>=80?'var(--go)':'var(--ic)';}
-  const overCat=txCats.map(c=>({c,pct:budgets[c]?Math.round(mTxs.filter(t=>t.type==='expense'&&t.cat===c).reduce((s,t)=>s+t.amount,0)/budgets[c]*100):0})).sort((a,b)=>b.pct-a.pct)[0];
+  const overCat=txCats.filter(c=>c!=='저축').map(c=>({c,pct:budgets[c]?Math.round(mTxs.filter(t=>t.type==='expense'&&t.cat===c).reduce((s,t)=>s+t.amount,0)/budgets[c]*100):0})).sort((a,b)=>b.pct-a.pct)[0];
   const dbs=document.getElementById('d-budget-sub');
   if(dbs)dbs.textContent=overCat&&overCat.pct>0?`${overCat.c} ${overCat.pct}% 사용`:'예산 미입력';
 
@@ -2167,7 +2167,6 @@ function render(){
         <div class="acct-bal" style="color:${excluded?'#c084fc':bal>=0?'var(--go)':'var(--ex)'}">${bal<0?'-':''}${fmt(bal)}</div>
         <div class="acct-detail"><span>입금 ${fmt(txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((s,t)=>s+t.amount,0))}</span><span>출금 ${fmt(txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0))}</span></div>
         ${recent.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd)"><div style="font-size:11px;color:var(--mu);margin-bottom:4px">최근 거래</div>${recent.map(t=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0"><span style="color:var(--tx)">${t.desc}</span><span style="color:${t.type==='income'?'var(--ic)':'var(--ex)'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span></div>`).join('')}</div>`:''}
-        ${excluded?`<button class="btn btn-pu btn-sm" onclick="openSettleModal(${a.id})" style="margin-top:8px;width:100%;font-size:12px">💑 이번달 반반 정산</button>`:''}
         <div class="ifoot" style="margin-top:8px"><button class="btn-edit" onclick="openAcctModal(${a.id})">✎</button><button class="btn-del" onclick="delAccount(${a.id})">✕</button></div>
       </div>`;
     }).join(''):'<div class="empty">통장을 추가해보세요</div>';
