@@ -1071,9 +1071,9 @@ function render(){
   renderYearly();
 
   // 자산
-  const tInc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const tSav=txs.filter(t=>t.type==='expense'&&t.cat==='저축').reduce((s,t)=>s+t.amount,0);
-  const tExpR=txs.filter(t=>t.type==='expense'&&t.cat!=='저축').reduce((s,t)=>s+t.amount,0);
+  const tInc=txs.filter(t=>t.type==='income'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const tSav=txs.filter(t=>t.type==='expense'&&t.cat==='저축'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
+  const tExpR=txs.filter(t=>t.type==='expense'&&t.cat!=='저축'&&!t.transferId).reduce((s,t)=>s+t.amount,0);
   const cashBal=tInc-tExpR-tSav;
   const mAst=assets.filter(a=>a.type==='asset').reduce((s,a)=>s+a.amount,0);
   const mDbt=assets.filter(a=>a.type==='debt').reduce((s,a)=>s+a.amount,0);
@@ -1081,12 +1081,33 @@ function render(){
   txs.filter(t=>t.type==='expense'&&t.cat==='저축').forEach(t=>{if(!sg[t.desc])sg[t.desc]=0;sg[t.desc]+=t.amount;});
   const unmatched=Object.entries(sg).filter(([n])=>!assets.find(a=>a.type==='asset'&&a.name===n));
   const unmTot=unmatched.reduce((s,[,v])=>s+v,0);
-  const ta=mAst+tSav+(cashBal>0?cashBal:0);
+
+  // 통장 잔액 합산 (자산 포함 통장만)
+  const acctBalMap={};
+  accounts.forEach(a=>{
+    const ai=txs.filter(t=>t.acctId===String(a.id)&&t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const ae=txs.filter(t=>t.acctId===String(a.id)&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    acctBalMap[a.id]={bal:a.init+ai-ae, a};
+  });
+  const acctAssetTot=accounts.filter(a=>a.include!==false).reduce((s,a)=>s+acctBalMap[a.id].bal,0);
+
+  const ta=mAst+tSav+(cashBal>0?cashBal:0)+acctAssetTot;
   const td=mDbt+(cashBal<0?Math.abs(cashBal):0);
-  const net=mAst+tSav+cashBal-mDbt;
+  const net=mAst+tSav+cashBal-mDbt+acctAssetTot;
   document.getElementById('a-tot').textContent=fmt(ta);
   document.getElementById('a-dbt').textContent=fmt(td);
   document.getElementById('a-net').textContent=(net<0?'-':'')+fmt(net);
+
+  // 통장 카드 (자산 포함 통장만 총자산 목록에 표시)
+  const acctCards=accounts.filter(a=>a.include!==false).map(a=>{
+    const {bal}=acctBalMap[a.id];
+    return`<div class="ai-card" style="border:1px solid rgba(251,191,36,.2)">
+      <div class="a-lbl" style="color:var(--go)">통장 · ${a.bank||'은행'}</div>
+      <div class="a-nm">${a.name}</div>
+      <div class="a-amt" style="color:${bal>=0?'var(--go)':'var(--ex)'}">${bal<0?'-':''}${fmt(bal)}</div>
+      <div style="font-size:11px;color:var(--mu);margin-top:4px">${a.num||'계좌번호 없음'}</div>
+    </div>`;
+  }).join('');
 
   const cashCard=`<div class="ai-card" style="border:1px solid rgba(96,165,250,.3)"><div class="a-lbl" style="color:var(--ac)">거래 내역 자동 합산</div><div class="a-nm">현금 잔액</div><div class="a-amt" style="color:${cashBal>=0?'var(--go)':'var(--ex)'}">${cashBal>=0?'':'-'}${fmt(cashBal)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">수입 ${fmt(tInc)} · 지출 ${fmt(tExpR)}</div></div>`;
   const savCard=unmatched.length>0?`<div class="ai-card" style="border:1px solid rgba(74,222,128,.3);cursor:pointer" onclick="toggleSavPanel()"><div class="a-lbl" style="color:var(--ic)">거래 내역 자동 · 클릭해서 상세보기</div><div class="a-nm">적금 누적 (기타)</div><div class="a-amt" style="color:var(--ic)">${fmt(unmTot)}</div><div style="font-size:11px;color:var(--mu);margin-top:6px">총 ${unmatched.length}건</div></div>`:'';
@@ -1115,7 +1136,7 @@ function render(){
     return`<div class="ai-card"><div class="a-lbl" style="color:${a.sv>0?'var(--ic)':'var(--mu)'}">${a.cat} · 자산${a.sv>0?' + 저축합산':''}</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--go)">${fmt(a.amount)}</div>${a.sv>0?`<div style="font-size:11px;color:var(--mu);margin-top:4px">기본 ${fmt(a.amount-a.sv)} + 저축 ${fmt(a.sv)}</div>`:''}${dateInfo}<div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`;
   }).join('');
   const dbtCards=assets.filter(a=>a.type==='debt').map(a=>`<div class="ai-card"><div class="a-lbl">${a.cat} · 부채</div><div class="a-nm">${a.name}</div><div class="a-amt" style="color:var(--ex)">-${fmt(a.amount)}</div><div class="ifoot"><button class="btn-edit" onclick="openAssetModal(${a.id})">✎</button><button class="btn-del" onclick="delAsset(${a.id})">✕</button></div></div>`).join('');
-  document.getElementById('asset-list').innerHTML=cashCard+savCard+astCards+dbtCards||'<div class="empty">자산을 추가해보세요</div>';
+  document.getElementById('asset-list').innerHTML=cashCard+savCard+acctCards+astCards+dbtCards||'<div class="empty">자산을 추가해보세요</div>';
   const sp=document.getElementById('sav-panel');
   if(savOpen){renderSavDetail();sp.style.display='block';}else sp.style.display='none';
 
