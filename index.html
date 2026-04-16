@@ -166,7 +166,21 @@ tr:hover td{background:var(--sf2);}
 .mft{display:flex;gap:8px;justify-content:flex-end;padding:1rem 1.4rem;border-top:1px solid var(--bd);}
 .btn-gh{background:transparent;border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:8px 16px;font-family:var(--font);font-size:13px;cursor:pointer;}
 .btn-gh:hover{background:var(--sf2);}
-/* Account tab */
+/* Login */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+.login-box{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:2.5rem;width:100%;max-width:380px;}
+.login-box h2{font-size:1.4rem;font-weight:700;margin-bottom:.4rem;}
+.login-box .sub{font-size:13px;color:var(--mu);margin-bottom:2rem;}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.login-field label{font-size:12px;color:var(--mu);}
+.login-field input{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:11px 14px;color:var(--tx);font-family:var(--font);font-size:14px;outline:none;transition:border-color .2s;}
+.login-field input:focus{border-color:var(--ac);}
+.login-btn{width:100%;padding:12px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;margin-top:6px;transition:opacity .2s;}
+.login-btn:hover{opacity:.85;}
+.login-err{font-size:12px;color:var(--ex);text-align:center;margin-top:8px;min-height:18px;}
+.login-switch{font-size:12px;color:var(--mu);text-align:center;margin-top:1rem;cursor:pointer;}
+.login-switch span{color:var(--ac);text-decoration:underline;}
+
 .acct-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
 .acct-card{background:var(--sf2);border-radius:12px;padding:16px;border:1px solid var(--bd);}
 .acct-card.linked{border-color:rgba(96,165,250,.4);}
@@ -178,7 +192,33 @@ tr:hover td{background:var(--sf2);}
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- 로그인 화면 -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div id="login-view">
+      <h2>💰 가계부</h2>
+      <div class="sub">로그인하여 시작하세요</div>
+      <div class="login-field"><label>아이디</label><input id="l-id" type="text" placeholder="아이디" onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()"></div>
+      <div class="login-field"><label>비밀번호</label><input id="l-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="login-btn" onclick="doLogin()">로그인</button>
+      <div class="login-err" id="l-err"></div>
+      <div class="login-switch" onclick="showSignup()">계정이 없으신가요? <span>회원가입</span></div>
+    </div>
+    <div id="signup-view" style="display:none">
+      <h2>💰 가계부</h2>
+      <div class="sub">계정을 만들어 시작하세요</div>
+      <div class="login-field"><label>아이디</label><input id="s-id" type="text" placeholder="아이디 설정" onkeydown="if(event.key==='Enter')document.getElementById('s-pw').focus()"></div>
+      <div class="login-field"><label>비밀번호</label><input id="s-pw" type="password" placeholder="비밀번호 설정" onkeydown="if(event.key==='Enter')document.getElementById('s-pw2').focus()"></div>
+      <div class="login-field"><label>비밀번호 확인</label><input id="s-pw2" type="password" placeholder="비밀번호 재입력" onkeydown="if(event.key==='Enter')doSignup()"></div>
+      <button class="login-btn" onclick="doSignup()">가입하기</button>
+      <div class="login-err" id="s-err"></div>
+      <div class="login-switch" onclick="showLogin()">이미 계정이 있으신가요? <span>로그인</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
 <h1>💰 <span>가계부</span></h1>
 <div style="display:flex;gap:6px;margin-bottom:1.5rem;margin-top:-1rem">
   <button class="mode-btn active" id="mode-personal" onclick="setMode('personal')">👤 내 자산</button>
@@ -469,6 +509,9 @@ tr:hover td{background:var(--sf2);}
   <div class="ss"><h3>고정 지출 카테고리</h3>
     <div class="tl" id="set-fixed-cats"></div>
     <div class="atr"><input id="new-fixed-cat" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')addCat('fixed')"><button class="btn btn-pu btn-sm" onclick="addCat('fixed')">+ 추가</button></div>
+  </div>
+  <div class="ss"><h3>계정</h3>
+    <button class="btn btn-gh" onclick="doLogout()" style="font-size:13px">🚪 로그아웃</button>
   </div>
 </div>
 </div>
@@ -1140,6 +1183,66 @@ function render(){
   document.getElementById('set-asset-cats').innerHTML=assetCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('asset','${c}')">✕</button></span>`).join('');
   document.getElementById('set-fixed-cats').innerHTML=fixedCats.map(c=>`<span class="tag">${c}<button class="td" onclick="delCat('fixed','${c}')">✕</button></span>`).join('');
 }
+
+function doLogout(){
+  sessionStorage.removeItem('gb_loggedIn');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('l-id').value='';
+  document.getElementById('l-pw').value='';
+  showLogin();
+}
+
+// ── LOGIN ──
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0; return String(h); }
+
+function showLogin(){ document.getElementById('login-view').style.display=''; document.getElementById('signup-view').style.display='none'; }
+function showSignup(){ document.getElementById('signup-view').style.display=''; document.getElementById('login-view').style.display='none'; }
+
+function doLogin(){
+  const id=document.getElementById('l-id').value.trim();
+  const pw=document.getElementById('l-pw').value;
+  const err=document.getElementById('l-err');
+  if(!id||!pw){err.textContent='아이디와 비밀번호를 입력하세요.';return;}
+  const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
+  const user=stored.find(u=>u.id===id&&u.pw===hashStr(pw));
+  if(!user){err.textContent='아이디 또는 비밀번호가 틀렸습니다.';return;}
+  sessionStorage.setItem('gb_loggedIn', id);
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  err.textContent='';
+}
+
+function doSignup(){
+  const id=document.getElementById('s-id').value.trim();
+  const pw=document.getElementById('s-pw').value;
+  const pw2=document.getElementById('s-pw2').value;
+  const err=document.getElementById('s-err');
+  if(!id||!pw){err.textContent='아이디와 비밀번호를 입력하세요.';return;}
+  if(pw!==pw2){err.textContent='비밀번호가 일치하지 않습니다.';return;}
+  if(pw.length<4){err.textContent='비밀번호는 4자 이상이어야 합니다.';return;}
+  const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
+  if(stored.find(u=>u.id===id)){err.textContent='이미 사용 중인 아이디입니다.';return;}
+  stored.push({id,pw:hashStr(pw)});
+  localStorage.setItem('gb_users',JSON.stringify(stored));
+  sessionStorage.setItem('gb_loggedIn',id);
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  err.textContent='';
+}
+
+function checkAuth(){
+  const loggedIn=sessionStorage.getItem('gb_loggedIn');
+  if(loggedIn){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('main-app').style.display='block';
+  }
+  // 계정 없으면 회원가입 화면으로
+  const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
+  if(!stored.length) showSignup();
+}
+
+checkAuth();
 
 document.getElementById('f-date').value=fdStr(_now);
 document.getElementById('tr-date').value=fdStr(_now);
