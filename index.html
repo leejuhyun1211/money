@@ -91,6 +91,17 @@ tr:hover td{background:var(--sf2);}
 @media(max-width:700px){.al{grid-template-columns:repeat(2,1fr);}.cards{grid-template-columns:1fr 1fr;}}
 /* Settings */
 .ss{margin-bottom:2rem;}
+#page-settings .nav{margin-bottom:1.2rem;}
+#page-settings .ss{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:1.2rem 1.4rem;margin-bottom:1rem;}
+#page-settings .ss h3{font-size:15px;margin:0 0 1rem;font-weight:600;color:var(--tx);}
+#page-settings .atr{margin-top:10px;}
+#page-settings .set-group-divider{width:1px;background:var(--bd);margin:4px 6px;align-self:stretch;}
+@media(max-width:700px){
+  #page-settings .set-group-divider{width:100%;height:1px;margin:4px 0;}
+  #page-settings .nav{padding:6px;}
+  #page-settings .nav-tab{padding:7px 10px;font-size:12px;}
+  #page-settings .ss{padding:1rem;}
+}
 .ss h3{font-size:14px;font-weight:500;color:var(--tx);margin-bottom:1rem;padding-bottom:8px;border-bottom:1px solid var(--bd);}
 .tl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
 .tag{display:inline-flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:5px 10px;font-size:12px;}
@@ -646,11 +657,12 @@ tr:hover td{background:var(--sf2);}
 <!-- 설정 -->
 <div class="page" id="page-settings">
   <!-- 서브 네비 (탭 네비와 동일 스타일) -->
-  <div class="nav" style="margin-bottom:1.5rem">
+  <div class="nav">
     <button class="nav-tab active" onclick="setSettingsSec('cats',this)">거래 카테고리</button>
     <button class="nav-tab" onclick="setSettingsSec('budgets',this)">카테고리별 예산</button>
     <button class="nav-tab" onclick="setSettingsSec('asset',this)">자산 종류</button>
     <button class="nav-tab" onclick="setSettingsSec('fixed',this)">고정 지출 카테고리</button>
+    <div class="set-group-divider"></div>
     <button class="nav-tab" onclick="setSettingsSec('app',this)">앱 설정</button>
     <button class="nav-tab" onclick="setSettingsSec('data',this)">데이터 관리</button>
     <button class="nav-tab" onclick="setSettingsSec('account',this)">계정</button>
