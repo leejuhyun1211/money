@@ -265,6 +265,10 @@ tr:hover td{background:var(--sf2);}
 </head>
 <body>
 
+<div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9998;background:#fbbf24;color:#78350f;padding:8px 16px;text-align:center;font-size:13px;font-weight:600;border-bottom:1px solid #d97706;box-shadow:0 2px 4px rgba(0,0,0,0.08)">
+  ⚠️ 오프라인 모드 — Supabase 연결 실패, localStorage 캐시를 사용 중입니다
+</div>
+
 <!-- 로그인 화면 -->
 <div class="login-screen" id="login-screen">
   <div class="login-box">
@@ -1694,6 +1698,175 @@ async function migrateToSupabase(){
 
   btn.disabled = false;
   btn.textContent = 'localStorage → Supabase 이관';
+}
+
+// ── LOAD ALL (Step 4-4): Supabase → 메모리 + localStorage 캐시 ──
+async function loadAll(){
+  if(isDemoMode || !currentUser){ console.log('loadAll: skipped (demo or no user)'); return; }
+  console.log('loadAll: starting for user', currentUser.id);
+  const banner = document.getElementById('offline-banner');
+  const userId = currentUser.id;
+
+  let results;
+  try {
+    results = await Promise.all([
+      sb.from('gb_accounts').select('*').order('id'),
+      sb.from('gb_assets').select('*').order('id'),
+      sb.from('gb_categories').select('*').order('sort_order', { ascending: true }),
+      sb.from('gb_budgets').select('*'),
+      sb.from('gb_fixeds').select('*').order('id'),
+      sb.from('gb_transfers').select('*').order('date'),
+      sb.from('gb_transactions').select('*').order('date', { ascending: false }),
+      sb.from('gb_user_config').select('*').eq('user_id', userId).maybeSingle(),
+    ]);
+  } catch(e){
+    console.error('loadAll: network/fatal error, falling back to localStorage', e);
+    if(banner) banner.style.display = '';
+    return;
+  }
+  const [acctR, assetR, catR, budR, fxR, trR, txR, cfgR] = results;
+
+  // 전부 실패 시 오프라인 배너 + localStorage 폴백 (메모리 변수 이미 로드됨)
+  const errorCount = results.filter(r => r.error).length;
+  if(errorCount === 8){
+    console.error('loadAll: all 8 queries failed', results.map(r => r.error?.message));
+    if(banner) banner.style.display = '';
+    return;
+  }
+
+  // 1) gb_accounts (id는 number 원형 유지)
+  if(!acctR.error){
+    accounts = (acctR.data || []).map(a => ({
+      id: a.id,
+      name: a.name,
+      num: a.num || '',
+      actype: a.actype,
+      bank: a.bank || '',
+      init: a.init,
+      include: a.include,
+      payday: a.payday,
+    }));
+    localStorage.setItem('gb_accounts', JSON.stringify(accounts));
+    console.log('loadAll: accounts', accounts.length);
+  } else console.error('loadAll: gb_accounts', acctR.error.message);
+
+  // 2) gb_assets
+  if(!assetR.error){
+    assets = (assetR.data || []).map(a => ({
+      id: a.id,
+      name: a.name,
+      amount: a.amount,
+      type: a.type,
+      cat: a.cat || '',
+      start: a.start || '',
+      end: a.end || '',
+      monthly: a.monthly || 0,
+    }));
+    localStorage.setItem('gb_assets', JSON.stringify(assets));
+    console.log('loadAll: assets', assets.length);
+  } else console.error('loadAll: gb_assets', assetR.error.message);
+
+  // 3) gb_categories (3개 kind 분리)
+  if(!catR.error){
+    const tx = [], as = [], fx = [];
+    (catR.data || []).forEach(c => {
+      if(c.kind === 'tx') tx.push(c.name);
+      else if(c.kind === 'asset') as.push(c.name);
+      else if(c.kind === 'fixed') fx.push(c.name);
+    });
+    if(tx.length){ txCats    = tx; localStorage.setItem('gb_txCats',    JSON.stringify(txCats)); }
+    if(as.length){ assetCats = as; localStorage.setItem('gb_assetCats', JSON.stringify(assetCats)); }
+    if(fx.length){ fixedCats = fx; localStorage.setItem('gb_fixedCats', JSON.stringify(fixedCats)); }
+    console.log('loadAll: categories tx=', tx.length, 'asset=', as.length, 'fixed=', fx.length);
+  } else console.error('loadAll: gb_categories', catR.error.message);
+
+  // 4) gb_budgets (rows → object)
+  if(!budR.error){
+    const obj = {};
+    (budR.data || []).forEach(b => { obj[b.cat] = b.amount; });
+    if(Object.keys(obj).length){
+      budgets = obj;
+      localStorage.setItem('gb_budgets', JSON.stringify(budgets));
+    }
+    console.log('loadAll: budgets', Object.keys(obj).length);
+  } else console.error('loadAll: gb_budgets', budR.error.message);
+
+  // 5) gb_fixeds (acct_id BIGINT → acctId string, 백업 원형 준수)
+  if(!fxR.error){
+    fixeds = (fxR.data || []).map(f => ({
+      id: f.id,
+      name: f.name,
+      amount: f.amount,
+      day: f.day,
+      cat: f.cat,
+      acctId: f.acct_id != null ? String(f.acct_id) : '',
+    }));
+    localStorage.setItem('gb_fixeds', JSON.stringify(fixeds));
+    console.log('loadAll: fixeds', fixeds.length);
+  } else console.error('loadAll: gb_fixeds', fxR.error.message);
+
+  // 6) gb_transfers (from_id/to_id → string, id는 number)
+  if(!trR.error){
+    transfers = (trR.data || []).map(t => ({
+      id: t.id,
+      fromId: String(t.from_id),
+      toId: String(t.to_id),
+      amt: t.amt,
+      date: t.date,
+      memo: t.memo || '',
+      purpose: t.purpose || '',
+    }));
+    localStorage.setItem('gb_transfers', JSON.stringify(transfers));
+    console.log('loadAll: transfers', transfers.length);
+  } else console.error('loadAll: gb_transfers', trR.error.message);
+
+  // 7) gb_transactions (description→desc, cat NULL→'이체' for transfer_id tx, acct_id→acctId string)
+  if(!txR.error){
+    txs = (txR.data || []).map(t => ({
+      id: t.id,
+      desc: t.description || '',
+      amount: t.amount,
+      type: t.type,
+      cat: t.cat ?? (t.transfer_id != null ? '이체' : ''),
+      date: t.date,
+      acctId: t.acct_id != null ? String(t.acct_id) : '',
+      transferId: t.transfer_id,
+      tags: Array.isArray(t.tags) ? t.tags : [],
+    }));
+    localStorage.setItem('gb_txs', JSON.stringify(txs));
+    console.log('loadAll: transactions', txs.length);
+  } else console.error('loadAll: gb_transactions', txR.error.message);
+
+  // 8) gb_user_config (maybeSingle, null 허용)
+  if(!cfgR.error){
+    if(cfgR.data){
+      if(cfgR.data.settings){
+        settings = cfgR.data.settings;
+        if(!settings.cardColors) settings.cardColors = { left:'#10b981', upcoming:'#f97316', budget:'#3b82f6', card:'#a855f7' };
+        localStorage.setItem('gb_settings', JSON.stringify(settings));
+      }
+      if(cfgR.data.fx_status){
+        fxStatus = cfgR.data.fx_status;
+        localStorage.setItem('gb_fx_status', JSON.stringify(fxStatus));
+      }
+      if(cfgR.data.cat_meta){
+        catMeta = cfgR.data.cat_meta;
+        localStorage.setItem('gb_catMeta', JSON.stringify(catMeta));
+      }
+      console.log('loadAll: user_config loaded');
+    } else {
+      console.log('loadAll: user_config row not found (new user, defaults retained)');
+    }
+  } else console.error('loadAll: gb_user_config', cfgR.error.message);
+
+  // 부분 실패 시 배너 표시, 전부 성공 시 숨김
+  if(errorCount > 0){
+    console.warn(`loadAll: ${errorCount}/8 tables failed, banner shown`);
+    if(banner) banner.style.display = '';
+  } else {
+    if(banner) banner.style.display = 'none';
+    console.log('loadAll: completed');
+  }
 }
 
 // ── 설정 서브탭 ──
@@ -3302,6 +3475,8 @@ async function doLogin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
   document.getElementById('header-user').textContent=`👤 ${userLabel()}`;
+  await loadAll();
+  render();
 }
 
 async function doSignup(){
@@ -3336,6 +3511,7 @@ async function doSignup(){
   document.getElementById('main-app').style.display='flex';
   document.getElementById('header-user').textContent=`👤 ${userLabel()}`;
   err.textContent='';
+  await loadAll();
   // 신규 가입 후 온보딩
   startOnboarding();
 }
@@ -3461,6 +3637,9 @@ if(trDateEl) trDateEl.value=fdStr(_now);
 
 (async () => {
   await checkAuth();
+  if(currentUser && !isDemoMode){
+    await loadAll();
+  }
   render();
 })();
 </script>
