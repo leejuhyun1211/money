@@ -276,8 +276,8 @@ tr:hover td{background:var(--sf2);}
         <li>📅 고정지출 + 캘린더로 결제 예정 한눈에</li>
         <li>💾 모든 데이터 로컬 저장 (내보내기/불러오기 지원)</li>
       </ul>
-      <div class="login-field"><label>아이디</label><input id="l-id" type="text" placeholder="아이디" onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()"></div>
-      <div class="login-field"><label>비밀번호</label><input id="l-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="login-field"><label>이메일</label><input id="l-email" type="email" autocomplete="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()"></div>
+      <div class="login-field"><label>비밀번호</label><input id="l-pw" type="password" autocomplete="current-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="login-btn" onclick="doLogin()">로그인</button>
       <button class="login-btn" onclick="doDemo()" style="background:transparent;border:1px solid var(--bd);color:var(--mu);margin-top:8px">🎯 체험하기 (샘플 데이터)</button>
       <div class="login-err" id="l-err"></div>
@@ -286,9 +286,9 @@ tr:hover td{background:var(--sf2);}
     <div id="signup-view" style="display:none">
       <h2>💰 가계부</h2>
       <div class="sub">계정을 만들어 시작하세요</div>
-      <div class="login-field"><label>아이디</label><input id="s-id" type="text" placeholder="아이디 설정" onkeydown="if(event.key==='Enter')document.getElementById('s-pw').focus()"></div>
-      <div class="login-field"><label>비밀번호</label><input id="s-pw" type="password" placeholder="비밀번호 설정" onkeydown="if(event.key==='Enter')document.getElementById('s-pw2').focus()"></div>
-      <div class="login-field"><label>비밀번호 확인</label><input id="s-pw2" type="password" placeholder="비밀번호 재입력" onkeydown="if(event.key==='Enter')doSignup()"></div>
+      <div class="login-field"><label>이메일</label><input id="s-email" type="email" autocomplete="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('s-pw').focus()"></div>
+      <div class="login-field"><label>비밀번호</label><input id="s-pw" type="password" autocomplete="new-password" placeholder="비밀번호 (6자 이상)" onkeydown="if(event.key==='Enter')document.getElementById('s-pw2').focus()"></div>
+      <div class="login-field"><label>비밀번호 확인</label><input id="s-pw2" type="password" autocomplete="new-password" placeholder="비밀번호 재입력" onkeydown="if(event.key==='Enter')doSignup()"></div>
       <button class="login-btn" onclick="doSignup()">가입하기</button>
       <div class="login-err" id="s-err"></div>
       <div class="login-switch" onclick="showLogin()">이미 계정이 있으신가요? <span>로그인</span></div>
@@ -1221,6 +1221,11 @@ const SUPABASE_URL = 'https://vvpeigyuzfjkwqdjxafr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2cGVpZ3l1emZqa3dxZGp4YWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMzc5ODIsImV4cCI6MjA5MTcxMzk4Mn0._OP51L0EOpNijE6rplhlALh3WSV46HLco8LS43f617Q';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ── AUTH STATE (Step 4-2) ──
+let currentUser = null;
+let isDemoMode = sessionStorage.getItem('gb_demo') === '1';
+function userLabel(){ return isDemoMode ? 'demo' : (currentUser?.email?.split('@')[0] || ''); }
+
 // ── DATA ──
 let txs       = JSON.parse(localStorage.getItem('gb_txs')       || '[]');
 let assets    = JSON.parse(localStorage.getItem('gb_assets')    || '[]');
@@ -1538,7 +1543,7 @@ function setSettingsSec(id, el){
   // 계정 섹션: 유저 이름 반영
   if(id==='account'){
     const un=document.getElementById('account-user-name');
-    if(un) un.textContent=sessionStorage.getItem('gb_loggedIn')||'-';
+    if(un) un.textContent=userLabel()||'-';
   }
 }
 
@@ -2463,7 +2468,7 @@ function render(){
   const gEl=document.getElementById('greeting');
   const tdEl=document.getElementById('today-date');
   if(gEl){
-    const user=sessionStorage.getItem('gb_loggedIn')||'';
+    const user=userLabel();
     gEl.textContent=`안녕하세요${user?`, ${user} 님`:''}!`;
   }
   if(tdEl){
@@ -3097,52 +3102,77 @@ function render(){
   ['left','upcoming','budget','card'].forEach(k=>{const el=document.getElementById('set-card-'+k); if(el) el.value=cc[k]||'#10b981';});
 }
 
-function doLogout(){
-  sessionStorage.removeItem('gb_loggedIn');
+async function doLogout(){
+  if(!isDemoMode){
+    try { await sb.auth.signOut(); }
+    catch(e){ console.error('signOut error:', e); }
+  }
+  currentUser=null;
+  isDemoMode=false;
+  sessionStorage.removeItem('gb_demo');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('main-app').style.display='none';
-  document.getElementById('l-id').value='';
+  document.getElementById('l-email').value='';
   document.getElementById('l-pw').value='';
   showLogin();
 }
 
 // ── LOGIN ──
-function hashStr(s){ let h=0; for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0; return String(h); }
-
 function showLogin(){ document.getElementById('login-view').style.display=''; document.getElementById('signup-view').style.display='none'; }
 function showSignup(){ document.getElementById('signup-view').style.display=''; document.getElementById('login-view').style.display='none'; }
 
-function doLogin(){
-  const id=document.getElementById('l-id').value.trim();
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim();
   const pw=document.getElementById('l-pw').value;
   const err=document.getElementById('l-err');
-  if(!id||!pw){err.textContent='아이디와 비밀번호를 입력하세요.';return;}
-  const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
-  const user=stored.find(u=>u.id===id&&u.pw===hashStr(pw));
-  if(!user){err.textContent='아이디 또는 비밀번호가 틀렸습니다.';return;}
-  sessionStorage.setItem('gb_loggedIn', id);
+  err.textContent='';
+  if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요.';return;}
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if(error){
+    if(error.message.includes('Invalid login credentials')) err.textContent='이메일 또는 비밀번호가 올바르지 않습니다.';
+    else if(error.message.includes('Email not confirmed')) err.textContent='이메일 인증이 필요합니다.';
+    else err.textContent=error.message;
+    return;
+  }
+  currentUser=data.user;
+  isDemoMode=false;
+  sessionStorage.removeItem('gb_demo');
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
-  document.getElementById('header-user').textContent=`👤 ${id}`;
-  err.textContent='';
+  document.getElementById('header-user').textContent=`👤 ${userLabel()}`;
 }
 
-function doSignup(){
-  const id=document.getElementById('s-id').value.trim();
+async function doSignup(){
+  const email=document.getElementById('s-email').value.trim();
   const pw=document.getElementById('s-pw').value;
   const pw2=document.getElementById('s-pw2').value;
   const err=document.getElementById('s-err');
-  if(!id||!pw){err.textContent='아이디와 비밀번호를 입력하세요.';return;}
+  err.textContent='';
+  if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요.';return;}
   if(pw!==pw2){err.textContent='비밀번호가 일치하지 않습니다.';return;}
-  if(pw.length<4){err.textContent='비밀번호는 4자 이상이어야 합니다.';return;}
-  const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
-  if(stored.find(u=>u.id===id)){err.textContent='이미 사용 중인 아이디입니다.';return;}
-  stored.push({id,pw:hashStr(pw)});
-  localStorage.setItem('gb_users',JSON.stringify(stored));
-  sessionStorage.setItem('gb_loggedIn',id);
+  if(pw.length<6){err.textContent='비밀번호는 6자 이상이어야 합니다.';return;}
+  const { data, error } = await sb.auth.signUp({ email, password: pw });
+  if(error){
+    if(error.message.includes('User already registered')||error.message.includes('already been registered')) err.textContent='이미 가입된 이메일입니다.';
+    else if(error.message.toLowerCase().includes('password')) err.textContent='비밀번호 형식이 올바르지 않습니다.';
+    else err.textContent=error.message;
+    return;
+  }
+  // Supabase는 이메일 열거 방어를 위해 중복 이메일도 에러 없이 빈 identities를 반환함
+  if(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){
+    err.textContent='이미 가입된 이메일입니다.';
+    return;
+  }
+  if(!data.session){
+    err.textContent='확인 메일을 전송했습니다. 메일함을 확인한 뒤 로그인하세요.';
+    return;
+  }
+  currentUser=data.user;
+  isDemoMode=false;
+  sessionStorage.removeItem('gb_demo');
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
-  document.getElementById('header-user').textContent=`👤 ${id}`;
+  document.getElementById('header-user').textContent=`👤 ${userLabel()}`;
   err.textContent='';
   // 신규 가입 후 온보딩
   startOnboarding();
@@ -3172,7 +3202,6 @@ function doDemo(){
   localStorage.setItem('gb_accounts',JSON.stringify(demoAccts));
   localStorage.setItem('gb_txs',JSON.stringify(demoTxs));
   localStorage.setItem('gb_fixeds',JSON.stringify(demoFixeds));
-  sessionStorage.setItem('gb_loggedIn','demo');
   sessionStorage.setItem('gb_demo','1');
   location.reload();
 }
@@ -3243,22 +3272,35 @@ function saveObStep(){
   }
 }
 
-function checkAuth(){
-  const loggedIn=sessionStorage.getItem('gb_loggedIn');
-  if(loggedIn){
+async function checkAuth(){
+  if(isDemoMode){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main-app').style.display='flex';
-    document.getElementById('header-user').textContent=`👤 ${loggedIn}`;
+    document.getElementById('header-user').textContent=`👤 ${userLabel()}`;
+    return;
   }
-  const stored=JSON.parse(localStorage.getItem('gb_users')||'[]');
-  if(!stored.length) showSignup();
+  let session=null;
+  try {
+    const { data } = await sb.auth.getSession();
+    session = data.session;
+  } catch(e){
+    console.error('getSession error:', e);
+  }
+  if(session){
+    currentUser=session.user;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('main-app').style.display='flex';
+    document.getElementById('header-user').textContent=`👤 ${userLabel()}`;
+  }
 }
-
-checkAuth();
 
 const trDateEl=document.getElementById('tr-date');
 if(trDateEl) trDateEl.value=fdStr(_now);
-render();
+
+(async () => {
+  await checkAuth();
+  render();
+})();
 </script>
 </body>
 </html>
