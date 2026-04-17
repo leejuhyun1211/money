@@ -392,6 +392,17 @@ tr:hover td{background:var(--sf2);}
     text-overflow: ellipsis;
   }
 
+  /* 캘린더 상단 3카드 1열 세로 스택 (M-1g A1) */
+  #page-calendar > div[style*="repeat(3,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 캘린더 셀 내부: 금액 숨기고 점만 (M-1g B1) */
+  .cal-table .cam { display: none; }
+  .cal-table .cm { font-size: 8px; margin-top: 2px; }
+  .cal-table .cdot { width: 6px !important; height: 6px !important; }
+  .cal-table .ced { gap: 0 !important; justify-content: flex-start; }
+
   /* ── Tx + Transfer tables → card view (M-1c / M-1d) ── */
   table:has(#tx-body),
   table:has(#ac-tx-body),
