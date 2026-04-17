@@ -403,6 +403,54 @@ tr:hover td{background:var(--sf2);}
   .cal-table .cdot { width: 6px !important; height: 6px !important; }
   .cal-table .ced { gap: 0 !important; justify-content: flex-start; }
 
+  /* 고정지출 상단 4카드 → 1열 (M-1h 2a) */
+  .fx-cards { grid-template-columns: 1fr !important; }
+
+  /* 고정지출 목록 테이블 → 카드 뷰 (M-1h 2b) */
+  table:has(#fx-table) { display: block; padding: 10px; }
+  table:has(#fx-table) thead { display: none; }
+  #fx-table { display: block; }
+  #fx-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name amount"
+      "meta meta"
+      "status action";
+    gap: 6px 8px;
+    align-items: center;
+    background: var(--sf2);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+  }
+  #fx-table tr:last-child { margin-bottom: 0; }
+  #fx-table tr:hover td { background: transparent; }
+  #fx-table td {
+    display: block;
+    padding: 0;
+    border: none;
+    font-size: 12px;
+    white-space: normal;
+    letter-spacing: normal;
+  }
+  #fx-table td:nth-child(1) { grid-area: name; font-weight: 600; font-size: 14px; color: var(--tx); }
+  #fx-table td:nth-child(4) { grid-area: amount; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; }
+  #fx-table td:nth-child(2),
+  #fx-table td:nth-child(3),
+  #fx-table td:nth-child(5) {
+    grid-area: meta;
+    display: inline;
+    font-size: 11px;
+    color: var(--mu);
+  }
+  #fx-table td:nth-child(2)::after,
+  #fx-table td:nth-child(3)::after { content: " · "; color: var(--mu); }
+  #fx-table td:nth-child(6) { grid-area: status; }
+  #fx-table td:nth-child(7) { display: none; }
+  #fx-table td:nth-child(8) { grid-area: action; text-align: right; }
+
   /* ── Tx + Transfer tables → card view (M-1c / M-1d) ── */
   table:has(#tx-body),
   table:has(#ac-tx-body),
@@ -2214,7 +2262,7 @@ function P(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  el.classList.add('active');
+  if(el) el.classList.add('active');
   render();
 }
 
