@@ -535,17 +535,18 @@ function MainApp({ user }) {
       )}
 
       {/* ── 고정항목 ── */}
-      {tab==='fixed' && (
-        <div style={{padding:'18px',maxWidth:'900px',margin:'0 auto'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px',flexWrap:'wrap',gap:'12px'}}>
-            <div style={{display:'flex',gap:'12px',flexWrap:'wrap'}}>
-              {[{label:'월 고정 지출',val:f(fixedMonthly)+'원',color:'#EF4444'},{label:'고정항목 수',val:fixedEntries.length+'개',color:'#7C3AED'},{label:'연간 예상',val:f(fixedMonthly*12)+'원',color:'#F97316'}].map(({label,val,color})=>(
-                <div key={label} style={{...card,padding:'12px 20px',borderLeft:`4px solid ${color}`}}><div style={{fontSize:'11px',color:'#9B8FA0'}}>{label}</div><div style={{fontSize:'18px',fontWeight:'700',color}}>{val}</div></div>
-              ))}
+      {tab==='fixed' && (()=>{
+        const upcoming3=fixedEntries.filter(e=>{const d=new Date(e.date);const diff=(d-now)/(864e5);return diff>=0&&diff<=3;}).length;
+        return (
+        <div style={{padding:'18px',maxWidth:'900px',margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}}>
+          {[{label:'월 고정지출',val:'₩'+f(fixedMonthly),color:'#EF4444',icon:'💳'},{label:'연간 고정지출',val:'₩'+f(fixedMonthly*12),color:'#F97316',icon:'🧮'},{label:'항목 수',val:fixedEntries.length+'건',color:'#7C3AED',icon:'📋'},{label:'3일 내 예정',val:upcoming3+'건',color:'#3B82F6',icon:'📅'}].map(({label,val,color,icon})=>(
+            <div key={label} style={{...card,padding:'14px 16px',display:'flex',alignItems:'center',gap:'12px'}}><div style={{width:'40px',height:'40px',borderRadius:'10px',background:`${color}18`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',flexShrink:0}}>{icon}</div><div><div style={{fontSize:'11px',color:'#9B8FA0'}}>{label}</div><div style={{fontSize:'18px',fontWeight:'700',color}}>{val}</div></div></div>
+          ))}
+          <div style={{...card,gridColumn:'1 / 4'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+              <div style={{fontSize:'13px',fontWeight:'600',color:'#6B5B7B'}}>고정 지출 목록</div>
+              <button onClick={()=>openEntryModal({is_fixed:true})} style={{background:'#7C3AED',color:'white',border:'none',borderRadius:'6px',padding:'5px 12px',fontSize:'11px',fontWeight:'600',cursor:'pointer'}}>+ 추가</button>
             </div>
-            <button onClick={()=>openEntryModal({is_fixed:true})} style={{background:'#7C3AED',color:'white',border:'none',borderRadius:'8px',padding:'7px 16px',fontSize:'12px',fontWeight:'600',cursor:'pointer'}}>+ 고정항목 추가</button>
-          </div>
-          <div style={card}>
             <BulkBar count={fixSel.sel.size} onDelete={()=>bulkDeleteEntries(fixSel.sel)} onClear={fixSel.clear}/>
             <table style={{width:'100%',borderCollapse:'collapse'}}>
               <thead><tr><th style={{...TH,width:'32px'}}><input type="checkbox" style={CB} checked={fixSel.allChecked} onChange={fixSel.toggleAll}/></th>{['날짜','구분','대분류','소분류','금액','결제수단','메모'].map((h,i)=><th key={i} style={{...TH,textAlign:i===4?'right':'left'}}>{h}</th>)}</tr></thead>
@@ -566,8 +567,18 @@ function MainApp({ user }) {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+          <div style={{...card,gridColumn:'4'}}>
+            <div style={{fontSize:'13px',fontWeight:'600',color:'#6B5B7B',marginBottom:'10px'}}>이번 달 결제 현황</div>
+            {fixedEntries.length===0&&<div style={{color:'#9B8FA0',fontSize:'12px',textAlign:'center',padding:'20px'}}>항목 없음</div>}
+            {fixedEntries.map(e=>(
+              <div key={e.id} style={{padding:'8px 0',borderBottom:'1px solid #F3F0F7',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div><div style={{fontSize:'12px',fontWeight:'500'}}>{e.category}</div><div style={{fontSize:'10px',color:'#9B8FA0'}}>{e.date}</div></div>
+                <div style={{fontSize:'12px',fontWeight:'600',color:e.type==='income'?'#22C55E':'#EC4899'}}>{f(e.amount)}</div>
+              </div>
+            ))}
+          </div>
+        </div>);
+      })()}
 
       {/* ── 자금확보 ── */}
       {tab==='goals' && (
