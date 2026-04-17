@@ -1467,6 +1467,24 @@ async function dbWrite(fn, opName){
   }
 }
 
+// user_config (settings + fxStatus + catMeta) 일괄 upsert (Step 4-5e)
+// 단일 row per user. ignoreDuplicates 기본값(false)이므로 기존 row 덮어씀.
+async function saveUserConfig(){
+  if(isDemoMode || !currentUser) return;
+  try {
+    const { error } = await sb.from('gb_user_config').upsert({
+      user_id: currentUser.id,
+      settings: settings || {},
+      fx_status: fxStatus || {},
+      cat_meta: catMeta || {},
+    }, { onConflict: 'user_id' });
+    if(error) throw error;
+  } catch(e){
+    console.error('saveUserConfig:', e);
+    alert('설정 저장 실패: ' + (e.message || e));
+  }
+}
+
 // 메모리 tx (desc/acctId string/transferId) → gb_transactions row 변환 (Step 4-5c)
 // NOTE: 4-5a의 4개 함수는 인라인 변환을 사용 중. 4-5f 정리 세션에서 일괄 통합 예정.
 function toDbTx(t){
@@ -1523,10 +1541,11 @@ function parseTags(s){return (s||'').trim().split(/[\s,]+/).filter(x=>x);}
 function fmtTags(a){return (a||[]).join(' ');}
 function catIcon(cat){return catMeta[cat]?.icon||'';}
 function catColor(cat){return catMeta[cat]?.color||'#94a3b8';}
-function updCatMeta(cat,field,val){
+async function updCatMeta(cat,field,val){
   if(!catMeta[cat]) catMeta[cat]={icon:'',color:'#94a3b8'};
   catMeta[cat][field]=val;
   save(); render();
+  await saveUserConfig();
 }
 function goMonth(m){
   hY=yY; hM=m-1;
@@ -1866,6 +1885,8 @@ async function loadAll(){
       date: t.date,
       acctId: t.acct_id != null ? String(t.acct_id) : '',
       transferId: t.transfer_id,
+      autoFromFx: t.auto_from_fx,
+      fxYm: t.fx_ym,
       tags: Array.isArray(t.tags) ? t.tags : [],
     }));
     localStorage.setItem('gb_txs', JSON.stringify(txs));
@@ -2009,7 +2030,7 @@ async function updBudget(cat,val){
     user_id: currentUser.id, cat, amount,
   }, { onConflict: 'user_id,cat' }), '예산 수정');
 }
-function updSetting(key,val){
+async function updSetting(key,val){
   if(key==='monthStartDay'){
     const n=parseInt(val)||1;
     settings.monthStartDay=Math.min(31,Math.max(1,n));
@@ -2017,6 +2038,7 @@ function updSetting(key,val){
     settings[key]=val;
   }
   save(); render();
+  await saveUserConfig();
 }
 
 // ── TX ──
@@ -2113,10 +2135,11 @@ function applyDashCardColors(){
     if(amt) amt.style.color=c;
   });
 }
-function updCardColor(key,val){
+async function updCardColor(key,val){
   if(!settings.cardColors) settings.cardColors={};
   settings.cardColors[key]=val;
   save(); applyDashCardColors();
+  await saveUserConfig();
 }
 async function addTxInline(){
   const amt=parseInt(document.getElementById('f-amt').value);
@@ -2350,27 +2373,38 @@ async function delFixed(id){
   // 자동 반영 거래 먼저 정리 (DB는 ON DELETE SET NULL이므로 앱 시맨틱과 맞추려면 명시 DELETE)
   await dbWrite(() => sb.from('gb_transactions').delete().eq('auto_from_fx', id), '연결 자동반영 거래 삭제');
   await dbWrite(() => sb.from('gb_fixeds').delete().eq('id', id), '고정지출 삭제');
-  // fxStatus JSONB 정리는 4-5e에서 saveUserConfig로 처리
+  // 관련 fxStatus 키 삭제 반영 (4-5e)
+  await saveUserConfig();
 }
 
 // ── 고정지출 상태 ──
 function fxKey(fxId,ym){return `${ym}_${fxId}`;}
 function getFxStatus(fxId,ym){return fxStatus[fxKey(fxId,ym)]||'pending';}
-function setFxStatus(fxId,ym,st){
+async function setFxStatus(fxId,ym,st){
   const prev=fxStatus[fxKey(fxId,ym)]||'pending';
   fxStatus[fxKey(fxId,ym)]=st;
   const f=fixeds.find(x=>x.id===fxId);
+  let createdTx=null, deletedTxId=null;
   if(f){
     const dateStr=fixedDateStr(ym,f.day);
     const existingIdx=txs.findIndex(t=>t.autoFromFx===fxId&&t.fxYm===ym);
     if(st==='done'&&prev!=='done'&&existingIdx===-1){
-      txs.unshift({id:Date.now()+Math.floor(Math.random()*1000),desc:f.name,amount:f.amount,type:'expense',cat:f.cat,date:dateStr,acctId:f.acctId||'',tags:[],autoFromFx:fxId,fxYm:ym});
+      createdTx={id:Date.now()+Math.floor(Math.random()*1000),desc:f.name,amount:f.amount,type:'expense',cat:f.cat,date:dateStr,acctId:f.acctId||'',tags:[],autoFromFx:fxId,fxYm:ym};
+      txs.unshift(createdTx);
     }
     if(st!=='done'&&existingIdx!==-1){
+      deletedTxId=txs[existingIdx].id;
       txs.splice(existingIdx,1);
     }
   }
   save(); render();
+  await saveUserConfig();
+  if(createdTx){
+    await dbWrite(() => sb.from('gb_transactions').insert(toDbTx(createdTx)), '고정 자동반영 거래 추가');
+  }
+  if(deletedTxId != null){
+    await dbWrite(() => sb.from('gb_transactions').delete().eq('id', deletedTxId), '고정 자동반영 거래 삭제');
+  }
 }
 
 // ── ACCOUNTS ──
