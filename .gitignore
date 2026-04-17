@@ -1,0 +1,19 @@
+# Secrets
+.mcp.json
+.env
+.env.claude
+.env.local
+.env.*
+*.credentials.json
+
+# Backups / legacy
+*.old
+money-backup.json
+
+# Build output
+node_modules/
+dist/
+
+# Editor/OS
+.vscode/
+.DS_Store

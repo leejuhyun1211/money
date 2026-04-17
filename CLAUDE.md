@@ -64,6 +64,13 @@ GitHub: leejuhyun1211/money
   - localStorage.clear, localStorage.removeItem
 - Bliss project_id 발견 즉시 중단하고 보고
 
+## Commit 규칙 (영구)
+
+- **Co-Authored-By 라인 절대 금지**: 모든 git commit 메시지에 `Co-Authored-By: Claude ...` 추가 금지
+- PR 본문에 `🤖 Generated with Claude Code` 류 푸터도 금지
+- 커밋 메시지 본문 마지막 실질 라인으로 끝낼 것
+- 이미 남은 `95acaa5` (Step 4-2) 커밋은 그대로 둠 (히스토리 재작성 금지)
+
 ---
 
 ## MCP 격리 테스트 결과 (2026-04-17)
