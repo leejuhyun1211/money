@@ -1467,6 +1467,25 @@ async function dbWrite(fn, opName){
   }
 }
 
+// 메모리 tx (desc/acctId string/transferId) → gb_transactions row 변환 (Step 4-5c)
+// NOTE: 4-5a의 4개 함수는 인라인 변환을 사용 중. 4-5f 정리 세션에서 일괄 통합 예정.
+function toDbTx(t){
+  return {
+    id: t.id,
+    user_id: currentUser.id,
+    description: t.desc || '',
+    amount: Math.abs(t.amount || 0),
+    type: t.type,
+    cat: t.cat === '이체' ? null : (t.cat || null),
+    date: t.date,
+    acct_id: t.acctId ? parseInt(t.acctId, 10) : null,
+    transfer_id: t.transferId != null ? t.transferId : null,
+    auto_from_fx: t.autoFromFx != null ? t.autoFromFx : null,
+    fx_ym: t.fxYm || null,
+    tags: Array.isArray(t.tags) ? t.tags : [],
+  };
+}
+
 const fmt  = n => '₩' + Math.abs(n).toLocaleString('ko-KR');
 const pad  = n => String(n).padStart(2,'0');
 const fdStr= d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -2393,7 +2412,7 @@ function addTrAmtAll(){
   if(bal>0){document.getElementById('tr-amt').value=bal;renderTransferPreview();}
 }
 
-function doTransfer(){
+async function doTransfer(){
   const fromId=document.getElementById('tr-from').value;
   const toId=document.getElementById('tr-to').value;
   const amt=parseInt(document.getElementById('tr-amt').value);
@@ -2402,15 +2421,28 @@ function doTransfer(){
   const purpose=document.getElementById('tr-purpose').value||'move';
   if(!fromId||!toId||!amt||!date||fromId===toId)return;
   const id=Date.now();
+  const tx1={id,desc:`이체 → ${accounts.find(a=>String(a.id)===toId)?.name||''}`,amount:amt,type:'expense',cat:'이체',date,acctId:fromId,transferId:id};
+  const tx2={id:id+1,desc:`이체 ← ${accounts.find(a=>String(a.id)===fromId)?.name||''}`,amount:amt,type:'income',cat:'이체',date,acctId:toId,transferId:id};
+  const transferRow={id,fromId,toId,amt,date,memo,purpose};
   // 출금 거래 (보내는 통장)
-  txs.unshift({id,desc:`이체 → ${accounts.find(a=>String(a.id)===toId)?.name||''}`,amount:amt,type:'expense',cat:'이체',date,acctId:fromId,transferId:id});
+  txs.unshift(tx1);
   // 입금 거래 (받는 통장)
-  txs.unshift({id:id+1,desc:`이체 ← ${accounts.find(a=>String(a.id)===fromId)?.name||''}`,amount:amt,type:'income',cat:'이체',date,acctId:toId,transferId:id});
-  transfers.unshift({id,fromId,toId,amt,date,memo,purpose});
+  txs.unshift(tx2);
+  transfers.unshift(transferRow);
   save(); render();
   document.getElementById('tr-amt').value='';
   document.getElementById('tr-memo').value='';
   renderTransferPreview();
+  // FK 순서: transfer 먼저(parent) → tx 2건(child, transfer_id 참조)
+  await dbWrite(() => sb.from('gb_transfers').insert({
+    id: transferRow.id, user_id: currentUser.id,
+    from_id: parseInt(transferRow.fromId, 10),
+    to_id:   parseInt(transferRow.toId, 10),
+    amt: transferRow.amt, date: transferRow.date,
+    memo: transferRow.memo || null, purpose: transferRow.purpose || null,
+  }), '이체 기록');
+  await dbWrite(() => sb.from('gb_transactions').insert(toDbTx(tx1)), '이체 출금 거래');
+  await dbWrite(() => sb.from('gb_transactions').insert(toDbTx(tx2)), '이체 입금 거래');
 }
 
 function acctBal(acctId){
@@ -2433,10 +2465,13 @@ function renderTransferPreview(){
   el.style.display='block';
   el.innerHTML=`💡 이체 후 예상 잔액 — <b>${from?.name}</b> ${fmt(fromBal-amt)} · <b>${to?.name}</b> ${fmt(toBal+amt)}`;
 }
-function delTransfer(id){
+async function delTransfer(id){
   transfers=transfers.filter(t=>t.id!==id);
   txs=txs.filter(t=>t.transferId!==id);
   save(); render();
+  // child 먼저(tx) → parent(transfer)
+  await dbWrite(() => sb.from('gb_transactions').delete().eq('transfer_id', id), '이체 연관 거래 삭제');
+  await dbWrite(() => sb.from('gb_transfers').delete().eq('id', id), '이체 삭제');
 }
 
 // ── 반반 정산 ──
@@ -2458,7 +2493,7 @@ function openSettleModal(sharedId){
   document.getElementById('settle-modal').style.display='flex';
 }
 function closeSettleModal(){document.getElementById('settle-modal').style.display='none';settleSharedId=null;}
-function confirmSettle(){
+async function confirmSettle(){
   if(!settleSharedId)return;
   const fromId=document.getElementById('settle-from').value;
   const toId=String(settleSharedId);
@@ -2471,10 +2506,23 @@ function confirmSettle(){
   const date=fdStr(new Date());
   const toName=accounts.find(a=>String(a.id)===toId)?.name||'';
   const fromName=accounts.find(a=>String(a.id)===fromId)?.name||'';
-  txs.unshift({id,desc:`이체 → ${toName} (정산)`,amount:half,type:'expense',cat:'이체',date,acctId:fromId,transferId:id});
-  txs.unshift({id:id+1,desc:`이체 ← ${fromName} (정산)`,amount:half,type:'income',cat:'이체',date,acctId:toId,transferId:id});
-  transfers.unshift({id,fromId,toId,amt:half,date,memo:`${hM+1}월 반반 정산`,purpose:'date'});
+  const tx1={id,desc:`이체 → ${toName} (정산)`,amount:half,type:'expense',cat:'이체',date,acctId:fromId,transferId:id};
+  const tx2={id:id+1,desc:`이체 ← ${fromName} (정산)`,amount:half,type:'income',cat:'이체',date,acctId:toId,transferId:id};
+  const transferRow={id,fromId,toId,amt:half,date,memo:`${hM+1}월 반반 정산`,purpose:'date'};
+  txs.unshift(tx1);
+  txs.unshift(tx2);
+  transfers.unshift(transferRow);
   save(); closeSettleModal(); render();
+  // FK 순서: transfer 먼저 → tx 2건
+  await dbWrite(() => sb.from('gb_transfers').insert({
+    id: transferRow.id, user_id: currentUser.id,
+    from_id: parseInt(transferRow.fromId, 10),
+    to_id:   parseInt(transferRow.toId, 10),
+    amt: transferRow.amt, date: transferRow.date,
+    memo: transferRow.memo || null, purpose: transferRow.purpose || null,
+  }), '반반 정산 이체 기록');
+  await dbWrite(() => sb.from('gb_transactions').insert(toDbTx(tx1)), '반반 정산 출금 거래');
+  await dbWrite(() => sb.from('gb_transactions').insert(toDbTx(tx2)), '반반 정산 입금 거래');
 }
 
 // ── NAV HELPERS ──
