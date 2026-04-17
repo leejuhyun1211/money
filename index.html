@@ -1971,22 +1971,44 @@ function refreshSelects(){
 }
 
 // ── SETTINGS ──
-function addCat(type){
+async function addCat(type){
   const map={tx:'new-tx-cat',asset:'new-asset-cat',fixed:'new-fixed-cat'};
   const inp=document.getElementById(map[type]);
   const val=inp.value.trim(); if(!val)return;
-  if(type==='tx'&&!txCats.includes(val)){txCats.push(val);budgets[val]=0;}
-  if(type==='asset'&&!assetCats.includes(val))assetCats.push(val);
-  if(type==='fixed'&&!fixedCats.includes(val))fixedCats.push(val);
+  let arr=null, isNew=false;
+  if(type==='tx' && !txCats.includes(val)){ txCats.push(val); budgets[val]=0; arr=txCats; isNew=true; }
+  if(type==='asset' && !assetCats.includes(val)){ assetCats.push(val); arr=assetCats; isNew=true; }
+  if(type==='fixed' && !fixedCats.includes(val)){ fixedCats.push(val); arr=fixedCats; isNew=true; }
   inp.value=''; save(); render();
+  if(!isNew) return;
+  await dbWrite(() => sb.from('gb_categories').insert({
+    user_id: currentUser.id, kind: type, name: val, sort_order: arr.length - 1,
+  }), '카테고리 추가');
+  if(type==='tx'){
+    await dbWrite(() => sb.from('gb_budgets').upsert({
+      user_id: currentUser.id, cat: val, amount: 0,
+    }, { onConflict: 'user_id,cat' }), '예산 항목 추가');
+  }
 }
-function delCat(type,val){
+async function delCat(type,val){
   if(type==='tx')txCats=txCats.filter(c=>c!==val);
   if(type==='asset')assetCats=assetCats.filter(c=>c!==val);
   if(type==='fixed')fixedCats=fixedCats.filter(c=>c!==val);
   save(); render();
+  await dbWrite(() => sb.from('gb_categories')
+    .delete()
+    .eq('user_id', currentUser.id)
+    .eq('kind', type)
+    .eq('name', val),
+    '카테고리 삭제');
 }
-function updBudget(cat,val){budgets[cat]=parseInt(val)||0; save();}
+async function updBudget(cat,val){
+  const amount = parseInt(val) || 0;
+  budgets[cat] = amount; save();
+  await dbWrite(() => sb.from('gb_budgets').upsert({
+    user_id: currentUser.id, cat, amount,
+  }, { onConflict: 'user_id,cat' }), '예산 수정');
+}
 function updSetting(key,val){
   if(key==='monthStartDay'){
     const n=parseInt(val)||1;
