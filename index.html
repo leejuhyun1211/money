@@ -2004,7 +2004,7 @@ function delFixedFromModal(){
   delFixed(editFxId);
   closeFxEditModal();
 }
-function saveFxEdit(){
+async function saveFxEdit(){
   if(!editFxId) return;
   const i=fixeds.findIndex(f=>f.id===editFxId); if(i===-1) return;
   const name=document.getElementById('efx-name').value.trim();
@@ -2016,7 +2016,12 @@ function saveFxEdit(){
   fixeds[i].day=day;
   fixeds[i].cat=document.getElementById('efx-cat').value;
   fixeds[i].acctId=document.getElementById('efx-acct').value;
+  const f=fixeds[i];
   save(); closeFxEditModal(); render();
+  await dbWrite(() => sb.from('gb_fixeds').update({
+    name: f.name, amount: f.amount, day: f.day, cat: f.cat,
+    acct_id: f.acctId ? parseInt(f.acctId, 10) : null,
+  }).eq('id', f.id), '고정지출 수정');
 }
 function openFixedForm(){
   const box=document.getElementById('fx-form-box');
@@ -2249,7 +2254,7 @@ function toggleSavDates(src){
   document.getElementById(id).style.display=isSav?'block':'none';
 }
 
-function addAsset(){
+async function addAsset(){
   const name=document.getElementById('a-name').value.trim();
   const amt=parseInt(document.getElementById('a-amt').value);
   const type=document.getElementById('a-type').value;
@@ -2258,31 +2263,53 @@ function addAsset(){
   const start=document.getElementById('a-start').value||'';
   const end=document.getElementById('a-end').value||'';
   const monthly=parseInt(document.getElementById('a-monthly').value)||0;
-  assets.push({id:Date.now(),name,amount:amt,type,cat,start,end,monthly});
+  const row={id:Date.now(),name,amount:amt,type,cat,start,end,monthly};
+  assets.push(row);
   save(); render();
   document.getElementById('a-name').value=''; document.getElementById('a-amt').value='';
   document.getElementById('a-start').value=''; document.getElementById('a-end').value='';
   document.getElementById('a-monthly').value='';
+  await dbWrite(() => sb.from('gb_assets').insert({
+    id: row.id, user_id: currentUser.id,
+    name: row.name, amount: row.amount, type: row.type,
+    cat: row.cat || null,
+    start: row.start || null,
+    end: row.end || null,
+    monthly: row.monthly || null,
+  }), '자산 추가');
 }
-function delAsset(id){assets=assets.filter(a=>a.id!==id); save(); render();}
+async function delAsset(id){
+  assets=assets.filter(a=>a.id!==id); save(); render();
+  await dbWrite(() => sb.from('gb_assets').delete().eq('id', id), '자산 삭제');
+}
 
 // ── FIXED ──
-function addFixed(){
+async function addFixed(){
   const name=document.getElementById('fx-name').value.trim();
   const amt=parseInt(document.getElementById('fx-amt').value);
   const day=parseInt(document.getElementById('fx-day').value)||1;
   const cat=document.getElementById('fx-cat').value;
   const acctId=document.getElementById('fx-acct').value;
   if(!name||!amt)return;
-  fixeds.push({id:Date.now(),name,amount:amt,day,cat,acctId});
+  const row={id:Date.now(),name,amount:amt,day,cat,acctId};
+  fixeds.push(row);
   save(); render();
   document.getElementById('fx-name').value=''; document.getElementById('fx-amt').value=''; document.getElementById('fx-day').value=''; document.getElementById('fx-acct').value='';
+  await dbWrite(() => sb.from('gb_fixeds').insert({
+    id: row.id, user_id: currentUser.id,
+    name: row.name, amount: row.amount, day: row.day, cat: row.cat,
+    acct_id: row.acctId ? parseInt(row.acctId, 10) : null,
+  }), '고정지출 추가');
 }
-function delFixed(id){
+async function delFixed(id){
   fixeds=fixeds.filter(f=>f.id!==id);
   txs=txs.filter(t=>t.autoFromFx!==id);
   Object.keys(fxStatus).forEach(k=>{if(k.endsWith('_'+id))delete fxStatus[k];});
   save(); render();
+  // 자동 반영 거래 먼저 정리 (DB는 ON DELETE SET NULL이므로 앱 시맨틱과 맞추려면 명시 DELETE)
+  await dbWrite(() => sb.from('gb_transactions').delete().eq('auto_from_fx', id), '연결 자동반영 거래 삭제');
+  await dbWrite(() => sb.from('gb_fixeds').delete().eq('id', id), '고정지출 삭제');
+  // fxStatus JSONB 정리는 4-5e에서 saveUserConfig로 처리
 }
 
 // ── 고정지출 상태 ──
@@ -2820,7 +2847,7 @@ function openAssetModal(id){
   document.getElementById('edit-asset-modal').style.display='flex';
 }
 function closeAssetModal(){document.getElementById('edit-asset-modal').style.display='none';editAId=null;}
-function saveAssetEdit(){
+async function saveAssetEdit(){
   if(!editAId)return;
   const i=assets.findIndex(a=>a.id===editAId); if(i===-1)return;
   assets[i].name=document.getElementById('ea-name').value.trim();
@@ -2830,7 +2857,15 @@ function saveAssetEdit(){
   assets[i].start=document.getElementById('ea-start').value;
   assets[i].end=document.getElementById('ea-end').value;
   assets[i].monthly=parseInt(document.getElementById('ea-monthly').value)||0;
+  const a=assets[i];
   save(); closeAssetModal(); render();
+  await dbWrite(() => sb.from('gb_assets').update({
+    name: a.name, amount: a.amount, type: a.type,
+    cat: a.cat || null,
+    start: a.start || null,
+    end: a.end || null,
+    monthly: a.monthly || null,
+  }).eq('id', a.id), '자산 수정');
 }
 
 // ── ACCOUNT EDIT MODAL ──
