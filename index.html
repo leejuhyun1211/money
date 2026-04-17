@@ -1025,6 +1025,12 @@ tr:hover td{background:var(--sf2);}
       </label>
     </div>
     <div style="font-size:11px;color:var(--mu);margin-top:6px">모든 거래/자산/고정지출/통장/설정이 JSON 파일로 저장됩니다.</div>
+
+    <hr style="margin:18px 0;border:none;border-top:1px solid var(--bd)">
+    <h4 style="font-size:13px;font-weight:600;margin:0 0 8px">☁ Supabase 이관</h4>
+    <div style="font-size:11px;color:var(--mu);margin-bottom:10px">현재 브라우저 localStorage의 모든 데이터를 Supabase로 업로드합니다. 같은 ID는 건너뜁니다(idempotent).</div>
+    <button id="migrate-btn" class="btn btn-blue" onclick="migrateToSupabase()" style="font-size:13px">localStorage → Supabase 이관</button>
+    <div id="migrate-log" style="margin-top:12px;font-size:12px;color:var(--tx);max-height:220px;overflow-y:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:10px;display:none"></div>
   </div>
   <div class="ss" data-sec="account" style="display:none"><h3>계정</h3>
     <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--sf2);border-radius:8px;margin-bottom:12px">
@@ -1532,6 +1538,162 @@ function importData(event){
     }
   };
   reader.readAsText(file);
+}
+
+// ── MIGRATION (Step 4-3): localStorage → Supabase ──
+async function migrateToSupabase(){
+  if(isDemoMode){ alert('데모 모드에서는 사용할 수 없습니다. 먼저 실제 계정으로 로그인하세요.'); return; }
+  if(!currentUser){ alert('로그인이 필요합니다.'); return; }
+  if(!confirm('현재 localStorage 데이터를 Supabase로 이관합니다. 계속하시겠습니까?\n\n(기존 localStorage는 그대로 보존됩니다)')) return;
+
+  const btn = document.getElementById('migrate-btn');
+  const log = document.getElementById('migrate-log');
+  btn.disabled = true;
+  btn.textContent = '이관 중...';
+  log.style.display = 'block';
+  log.textContent = '';
+  const append = m => { log.textContent += m + '\n'; log.scrollTop = log.scrollHeight; };
+
+  const userId = currentUser.id;
+  const results = {};
+
+  // 공통 upsert helper (idempotent)
+  async function upsertRows(table, rows, conflict){
+    if(!rows || !rows.length){ results[table] = { ok:true, count:0, skipped:true }; append(`• ${table}: 0건 (없음)`); return; }
+    try {
+      const { error } = await sb.from(table).upsert(rows, { onConflict: conflict, ignoreDuplicates: true });
+      if(error) throw error;
+      results[table] = { ok:true, count: rows.length };
+      append(`✓ ${table}: ${rows.length}건 완료`);
+    } catch(e){
+      results[table] = { ok:false, error: e.message };
+      append(`✗ ${table}: ${e.message}`);
+    }
+  }
+
+  append(`이관 시작 · user_id=${userId}`);
+
+  // 1) gb_accounts
+  await upsertRows('gb_accounts', (accounts || []).map(a => ({
+    id: a.id,
+    user_id: userId,
+    name: a.name,
+    num: a.num || null,
+    actype: a.actype || 'bank',
+    bank: a.bank || null,
+    init: a.init || 0,
+    include: a.include !== false,
+    payday: a.payday || 0,
+  })), 'id');
+
+  // 2) gb_assets
+  await upsertRows('gb_assets', (assets || []).map(a => ({
+    id: a.id,
+    user_id: userId,
+    name: a.name,
+    amount: a.amount,
+    type: a.type || 'asset',
+    cat: a.cat || null,
+    start: a.start || null,
+    end: a.end || null,
+    monthly: a.monthly || null,
+  })), 'id');
+
+  // 3) gb_categories (3개 리스트를 kind로 분리 후 병합)
+  {
+    const catRows = [];
+    (txCats    || []).forEach((name, i) => catRows.push({ user_id:userId, kind:'tx',    name, sort_order:i }));
+    (assetCats || []).forEach((name, i) => catRows.push({ user_id:userId, kind:'asset', name, sort_order:i }));
+    (fixedCats || []).forEach((name, i) => catRows.push({ user_id:userId, kind:'fixed', name, sort_order:i }));
+    await upsertRows('gb_categories', catRows, 'user_id,kind,name');
+  }
+
+  // 4) gb_budgets (객체 → 행)
+  {
+    const budRows = Object.entries(budgets || {}).map(([cat, amount]) => ({
+      user_id: userId,
+      cat,
+      amount: Number(amount) || 0,
+    }));
+    await upsertRows('gb_budgets', budRows, 'user_id,cat');
+  }
+
+  // 5) gb_fixeds
+  await upsertRows('gb_fixeds', (fixeds || []).map(f => ({
+    id: f.id,
+    user_id: userId,
+    name: f.name,
+    amount: f.amount,
+    day: f.day,
+    cat: f.cat || '기타',
+    acct_id: f.acctId ? parseInt(f.acctId, 10) : null,
+  })), 'id');
+
+  // 6) gb_transfers
+  await upsertRows('gb_transfers', (transfers || []).map(t => ({
+    id: t.id,
+    user_id: userId,
+    from_id: parseInt(t.fromId, 10),
+    to_id:   parseInt(t.toId, 10),
+    amt: t.amt,
+    date: t.date,
+    memo: t.memo || null,
+    purpose: t.purpose || null,
+  })), 'id');
+
+  // 7) gb_transactions (gb_txs → gb_transactions, desc → description, 이체 cat → null)
+  await upsertRows('gb_transactions', (txs || []).map(t => ({
+    id: t.id,
+    user_id: userId,
+    description: t.desc || '',
+    amount: Math.abs(t.amount || 0),
+    type: t.type,
+    cat: t.cat === '이체' ? null : (t.cat || null),
+    date: t.date,
+    acct_id: t.acctId ? parseInt(t.acctId, 10) : null,
+    transfer_id: t.transferId || null,
+    auto_from_fx: null,
+    fx_ym: null,
+    tags: Array.isArray(t.tags) ? t.tags : [],
+  })), 'id');
+
+  // 8) gb_user_config (단일 row; settings + fx_status + cat_meta)
+  {
+    let catMeta = {};
+    try { catMeta = JSON.parse(localStorage.getItem('gb_catMeta') || '{}'); } catch(_){}
+    const configRow = {
+      user_id: userId,
+      settings: settings || {},
+      fx_status: fxStatus || {},
+      cat_meta: catMeta,
+    };
+    try {
+      const { error } = await sb.from('gb_user_config').upsert(configRow, { onConflict:'user_id', ignoreDuplicates:true });
+      if(error) throw error;
+      results.gb_user_config = { ok:true, count:1 };
+      append(`✓ gb_user_config: 1건 완료`);
+    } catch(e){
+      results.gb_user_config = { ok:false, error:e.message };
+      append(`✗ gb_user_config: ${e.message}`);
+    }
+  }
+
+  // 최종 요약
+  const tables = Object.keys(results);
+  const ok = tables.filter(t => results[t].ok).length;
+  const fail = tables.filter(t => !results[t].ok);
+  append('');
+  append(`완료: ${ok}/${tables.length} 테이블 성공`);
+  if(fail.length){
+    append(`실패 테이블: ${fail.join(', ')}`);
+    append(`(localStorage는 보존됨 — 수정 후 다시 실행 가능)`);
+  } else {
+    const total = tables.reduce((s,t) => s + (results[t].count || 0), 0);
+    append(`총 ${total}건 업서트. localStorage 그대로 보존됨.`);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'localStorage → Supabase 이관';
 }
 
 // ── 설정 서브탭 ──
