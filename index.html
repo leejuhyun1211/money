@@ -374,6 +374,24 @@ tr:hover td{background:var(--sf2);}
   .cam { font-size: 9px; }
   .cm { font-size: 9px; }
 
+  /* 캘린더 부모 인라인 min-width:600px 무력화 (C2) */
+  [style*="min-width:600px"] {
+    min-width: 0 !important;
+    overflow-x: auto;
+  }
+  .cal-table {
+    min-width: 0 !important;
+    width: 100%;
+    table-layout: fixed;
+    font-size: 10px;
+  }
+  .cal-table td, .cal-table th {
+    min-width: 0 !important;
+    width: auto !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* ── Tx + Transfer tables → card view (M-1c / M-1d) ── */
   table:has(#tx-body),
   table:has(#ac-tx-body),
