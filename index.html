@@ -261,6 +261,7 @@ tr:hover td{background:var(--sf2);}
 .acct-bal{font-size:1.3rem;font-weight:700;color:var(--go);}
 .acct-detail{font-size:11px;color:var(--mu);margin-top:6px;display:flex;gap:10px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1215,6 +1216,11 @@ tr:hover td{background:var(--sf2);}
 </div>
 
 <script>
+// ── SUPABASE CLIENT (Step 4-1) ──
+const SUPABASE_URL = 'https://vvpeigyuzfjkwqdjxafr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2cGVpZ3l1emZqa3dxZGp4YWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMzc5ODIsImV4cCI6MjA5MTcxMzk4Mn0._OP51L0EOpNijE6rplhlALh3WSV46HLco8LS43f617Q';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ── DATA ──
 let txs       = JSON.parse(localStorage.getItem('gb_txs')       || '[]');
 let assets    = JSON.parse(localStorage.getItem('gb_assets')    || '[]');
