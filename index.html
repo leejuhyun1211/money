@@ -10,6 +10,7 @@
   --ic:#10b981;--ex:#ef4444;--ac:#10b981;--go:#f59e0b;--pu:#a855f7;--gr:#10b981;
   --font:'Noto Sans KR',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box;}
+html, body { overflow-x: hidden; max-width: 100vw; }
 body{background:var(--bg);color:var(--tx);font-family:var(--font);min-height:100vh;}
 .app{max-width:1280px;margin:0 auto;padding:0;display:flex;min-height:100vh;}
 .sidebar{width:220px;min-width:220px;background:var(--sf);border-right:1px solid var(--bd);padding:1.4rem 1rem;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
@@ -256,11 +257,15 @@ tr:hover td{background:var(--sf2);}
     display: flex;
     position: fixed;
     bottom: 0; left: 0; right: 0;
+    width: 100%;
+    box-sizing: border-box;
     background: var(--bg);
     border-top: 1px solid var(--bd);
     box-shadow: 0 -2px 10px rgba(0,0,0,0.04);
-    padding: 6px 4px;
+    padding-top: 6px;
     padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    padding-left: calc(4px + env(safe-area-inset-left));
+    padding-right: calc(4px + env(safe-area-inset-right));
     z-index: 100;
     justify-content: space-around;
     align-items: stretch;
@@ -355,6 +360,83 @@ tr:hover td{background:var(--sf2);}
 @media (max-width: 640px) {
   .bg { grid-template-columns: 1fr; }
   .fab { bottom: 16px; right: 16px; width: 52px; height: 52px; }
+
+  /* 대시보드 2x2 카드 → 세로 1열 (B) */
+  #dash-cards { grid-template-columns: 1fr !important; }
+
+  /* 캘린더 컴팩트 뷰 (C): 셀 축소 + 주간 열 숨김 */
+  .cal-table td { height: 60px; padding: 3px; }
+  .cal-table th { padding: 6px 3px; font-size: 11px; }
+  .cal-table th.wk, .cal-table td.wks { display: none; }
+  .cd { font-size: 11px; margin-bottom: 2px; }
+  .ced { font-size: 9px; gap: 2px; }
+  .cdot { width: 5px; height: 5px; }
+  .cam { font-size: 9px; }
+  .cm { font-size: 9px; }
+
+  /* ── Tx + Transfer tables → card view (M-1c / M-1d) ── */
+  table:has(#tx-body),
+  table:has(#ac-tx-body),
+  table:has(#tr-body) {
+    display: block;
+    padding: 10px;
+  }
+  table:has(#tx-body) thead,
+  table:has(#ac-tx-body) thead,
+  table:has(#tr-body) thead { display: none; }
+
+  #tx-body, #ac-tx-body, #tr-body { display: block; }
+
+  /* 각 행을 카드로 */
+  #tx-body tr, #ac-tx-body tr, #tr-body tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    column-gap: 10px;
+    row-gap: 2px;
+    background: var(--sf2);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+  }
+  #tx-body tr:last-child, #ac-tx-body tr:last-child, #tr-body tr:last-child { margin-bottom: 0; }
+  #tx-body tr:hover td, #ac-tx-body tr:hover td, #tr-body tr:hover td { background: transparent; }
+  #tx-body td, #ac-tx-body td, #tr-body td {
+    display: block;
+    padding: 0;
+    border: none;
+    font-size: 12px;
+    white-space: normal;
+    letter-spacing: normal;
+  }
+
+  /* tx-body (7열: date/content/cat/type/acct/amount/actions) */
+  #tx-body td:nth-child(1) { grid-column: 1; grid-row: 1; color: var(--mu); font-size: 11px; }
+  #tx-body td:nth-child(2) { grid-column: 2; grid-row: 1; font-weight: 600; font-size: 14px; color: var(--tx); }
+  #tx-body td:nth-child(3) { grid-column: 1 / 3; grid-row: 2; color: var(--mu); font-size: 11px; }
+  #tx-body td:nth-child(4) { display: none; }
+  #tx-body td:nth-child(5) { display: none; }
+  #tx-body td:nth-child(6) { grid-column: 3; grid-row: 1 / 3; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; align-self: center; }
+  #tx-body td:nth-child(7) { grid-column: 1 / 4; grid-row: 3; justify-self: end; padding-top: 4px; }
+
+  /* ac-tx-body (6열: date/content/cat/type/amount/actions) */
+  #ac-tx-body td:nth-child(1) { grid-column: 1; grid-row: 1; color: var(--mu); font-size: 11px; }
+  #ac-tx-body td:nth-child(2) { grid-column: 2; grid-row: 1; font-weight: 600; font-size: 14px; color: var(--tx); }
+  #ac-tx-body td:nth-child(3) { grid-column: 1 / 3; grid-row: 2; color: var(--mu); font-size: 11px; }
+  #ac-tx-body td:nth-child(4) { display: none; }
+  #ac-tx-body td:nth-child(5) { grid-column: 3; grid-row: 1 / 3; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; align-self: center; }
+  #ac-tx-body td:nth-child(6) { grid-column: 1 / 4; grid-row: 3; justify-self: end; padding-top: 4px; }
+
+  /* tr-body (7열: date/purpose/from/to/amount/memo/action) */
+  #tr-body td:nth-child(1) { grid-column: 1; grid-row: 1; color: var(--mu); font-size: 11px; }
+  #tr-body td:nth-child(2) { grid-column: 2; grid-row: 1; font-weight: 600; font-size: 14px; color: var(--tx); }
+  #tr-body td:nth-child(3) { grid-column: 1 / 3; grid-row: 2; color: var(--mu); font-size: 11px; }
+  #tr-body td:nth-child(3)::before { content: "➡ "; color: var(--ex); }
+  #tr-body td:nth-child(4) { grid-column: 1 / 3; grid-row: 3; color: var(--mu); font-size: 11px; }
+  #tr-body td:nth-child(4)::before { content: "⬅ "; color: var(--ic); }
+  #tr-body td:nth-child(5) { grid-column: 3; grid-row: 1 / 4; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; align-self: center; }
+  #tr-body td:nth-child(6) { grid-column: 1 / 4; grid-row: 4; color: var(--mu); font-style: italic; font-size: 11px; }
+  #tr-body td:nth-child(7) { grid-column: 1 / 4; grid-row: 5; justify-self: end; padding-top: 4px; }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
