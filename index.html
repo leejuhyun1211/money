@@ -1451,6 +1451,22 @@ function save(){
   localStorage.setItem('gb_catMeta',   JSON.stringify(catMeta));
 }
 
+// ── DB WRITE HELPER (Step 4-5) ──
+// 낙관적 UI: 호출부가 이미 메모리/localStorage를 갱신한 뒤 DB 전파용으로 호출.
+// 데모/비로그인 시 no-op. 실패 시 console.error + alert(opName).
+async function dbWrite(fn, opName){
+  if(isDemoMode || !currentUser) return { ok:true, skipped:true };
+  try {
+    const res = await fn();
+    if(res && res.error) throw res.error;
+    return { ok:true, data: res?.data };
+  } catch(e){
+    console.error(`dbWrite[${opName}]:`, e);
+    alert(`${opName} 실패: ${e.message || e}`);
+    return { ok:false, error:e };
+  }
+}
+
 const fmt  = n => '₩' + Math.abs(n).toLocaleString('ko-KR');
 const pad  = n => String(n).padStart(2,'0');
 const fdStr= d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -2056,19 +2072,29 @@ function updCardColor(key,val){
   settings.cardColors[key]=val;
   save(); applyDashCardColors();
 }
-function addTxInline(){
+async function addTxInline(){
   const amt=parseInt(document.getElementById('f-amt').value);
   const cat=document.getElementById('f-cat').value;
   if(!amt||amt<=0){document.getElementById('f-amt').focus();return;}
   const date=fdStr(new Date());
   const desc=cat;
   const acctId=settings.defaultAcctId||'';
-  txs.unshift({id:Date.now(),desc,amount:amt,type:qType,cat,date,acctId,tags:[]});
+  const row={id:Date.now(),desc,amount:amt,type:qType,cat,date,acctId,tags:[]};
+  txs.unshift(row);
   const txYm=ymKey(date), curYm=`${hY}-${pad(hM+1)}`;
   if(txYm!==curYm){const [y,m]=txYm.split('-').map(Number);hY=y;hM=m-1;}
   save(); render();
   document.getElementById('f-amt').value='';
   document.getElementById('f-amt').focus();
+  await dbWrite(() => sb.from('gb_transactions').insert({
+    id: row.id, user_id: currentUser.id,
+    description: row.desc, amount: row.amount, type: row.type,
+    cat: row.cat === '이체' ? null : (row.cat || null),
+    date: row.date,
+    acct_id: row.acctId ? parseInt(row.acctId, 10) : null,
+    transfer_id: null, auto_from_fx: null, fx_ym: null,
+    tags: row.tags || [],
+  }), '거래 추가');
 }
 
 function addTx(src){
@@ -2116,7 +2142,7 @@ function toggleAddTxDetail(){
   d.style.display=open?'block':'none';
   b.textContent=(open?'▼':'▶')+' 상세';
 }
-function submitAddTx(){
+async function submitAddTx(){
   const amt=parseInt(document.getElementById('at-amt').value);
   const cat=document.getElementById('at-cat').value;
   const date=document.getElementById('at-date').value;
@@ -2124,11 +2150,21 @@ function submitAddTx(){
   const acctId=document.getElementById('at-acct').value;
   const tags=parseTags(document.getElementById('at-tags').value);
   if(!amt||amt<=0||!date){alert('금액과 날짜를 확인해주세요.');return;}
-  txs.unshift({id:Date.now(),desc,amount:amt,type:addTxType,cat,date,acctId,tags});
+  const row={id:Date.now(),desc,amount:amt,type:addTxType,cat,date,acctId,tags};
+  txs.unshift(row);
   const txYm=ymKey(date);
   const curYm=`${hY}-${pad(hM+1)}`;
   if(txYm!==curYm){const [y,m]=txYm.split('-').map(Number);hY=y;hM=m-1;}
   save(); closeAddTxModal(); render();
+  await dbWrite(() => sb.from('gb_transactions').insert({
+    id: row.id, user_id: currentUser.id,
+    description: row.desc, amount: row.amount, type: row.type,
+    cat: row.cat === '이체' ? null : (row.cat || null),
+    date: row.date,
+    acct_id: row.acctId ? parseInt(row.acctId, 10) : null,
+    transfer_id: null, auto_from_fx: null, fx_ym: null,
+    tags: row.tags || [],
+  }), '거래 추가');
 }
 
 // ── 활성 필터 칩 ──
@@ -2173,13 +2209,25 @@ function fabAction(){
     openAddTxModal();
   }
 }
-function delTx(id){txs=txs.filter(t=>t.id!==id); save(); render();}
-function dupTx(id){
+async function delTx(id){
+  txs=txs.filter(t=>t.id!==id); save(); render();
+  await dbWrite(() => sb.from('gb_transactions').delete().eq('id', id), '거래 삭제');
+}
+async function dupTx(id){
   const t=txs.find(x=>x.id===id); if(!t) return;
   const copy={...t,id:Date.now(),date:fdStr(new Date())};
   delete copy.transferId;
   txs.unshift(copy);
   save(); render();
+  await dbWrite(() => sb.from('gb_transactions').insert({
+    id: copy.id, user_id: currentUser.id,
+    description: copy.desc, amount: copy.amount, type: copy.type,
+    cat: copy.cat === '이체' ? null : (copy.cat || null),
+    date: copy.date,
+    acct_id: copy.acctId ? parseInt(copy.acctId, 10) : null,
+    transfer_id: null, auto_from_fx: null, fx_ym: null,
+    tags: copy.tags || [],
+  }), '거래 복제');
 }
 function setF(m,el){txFil=m; document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); txPage=1; render();}
 
@@ -2267,7 +2315,7 @@ function toggleAcctFields(mode){
   if(initF) initF.style.display=isCard?'none':'';
   if(payF) payF.style.display=isCard?'':'none';
 }
-function addAccount(){
+async function addAccount(){
   const name=document.getElementById('ac-name').value.trim();
   const num=document.getElementById('ac-num').value.trim();
   const actype=document.getElementById('ac-actype').value;
@@ -2276,14 +2324,23 @@ function addAccount(){
   const payday=actype==='card'?(parseInt(document.getElementById('ac-payday').value)||0):0;
   const include=document.getElementById('ac-include').value==='1';
   if(!name)return;
-  accounts.push({id:Date.now(),name,num,actype,bank,init,include,payday});
+  const row={id:Date.now(),name,num,actype,bank,init,include,payday};
+  accounts.push(row);
   save(); render();
   ['ac-name','ac-num','ac-bank','ac-init','ac-payday'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('ac-include').value='1';
   document.getElementById('ac-actype').value='bank';
   toggleAcctFields('add');
+  await dbWrite(() => sb.from('gb_accounts').insert({
+    id: row.id, user_id: currentUser.id,
+    name: row.name, num: row.num || null, actype: row.actype,
+    bank: row.bank || null, init: row.init, include: row.include, payday: row.payday,
+  }), '통장/카드 추가');
 }
-function delAccount(id){accounts=accounts.filter(a=>a.id!==id); save(); render();}
+async function delAccount(id){
+  accounts=accounts.filter(a=>a.id!==id); save(); render();
+  await dbWrite(() => sb.from('gb_accounts').delete().eq('id', id), '통장/카드 삭제');
+}
 
 const TRANSFER_PURPOSES={move:'내 자산 이동',saving:'저축 이체',card:'카드값 납부',debt:'부채 상환',shared:'공유 통장 입금',date:'데이트 정산'};
 const TRANSFER_PURPOSE_ICONS={move:'🔁',saving:'💰',card:'💳',debt:'🏦',shared:'👥',date:'💑'};
@@ -2726,7 +2783,7 @@ function openTxModal(id){
   document.getElementById('edit-tx-modal').style.display='flex';
 }
 function closeTxModal(){document.getElementById('edit-tx-modal').style.display='none';editTxId=null;}
-function saveTxEdit(){
+async function saveTxEdit(){
   if(!editTxId)return;
   const i=txs.findIndex(t=>t.id===editTxId); if(i===-1)return;
   txs[i].desc=document.getElementById('et-desc').value.trim();
@@ -2736,7 +2793,15 @@ function saveTxEdit(){
   txs[i].date=document.getElementById('et-date').value;
   txs[i].acctId=document.getElementById('et-acct').value;
   txs[i].tags=parseTags(document.getElementById('et-tags').value);
+  const t=txs[i];
   save(); closeTxModal(); render();
+  await dbWrite(() => sb.from('gb_transactions').update({
+    description: t.desc, amount: t.amount, type: t.type,
+    cat: t.cat === '이체' ? null : (t.cat || null),
+    date: t.date,
+    acct_id: t.acctId ? parseInt(t.acctId, 10) : null,
+    tags: t.tags || [],
+  }).eq('id', t.id), '거래 수정');
 }
 
 // ── ASSET EDIT MODAL ──
@@ -2783,7 +2848,7 @@ function openAcctModal(id){
   document.getElementById('edit-acct-modal').style.display='flex';
 }
 function closeAcctModal(){document.getElementById('edit-acct-modal').style.display='none';editAcId=null;}
-function saveAcctEdit(){
+async function saveAcctEdit(){
   if(!editAcId)return;
   const i=accounts.findIndex(a=>a.id===editAcId); if(i===-1)return;
   accounts[i].name=document.getElementById('eac-name').value.trim();
@@ -2793,7 +2858,12 @@ function saveAcctEdit(){
   accounts[i].init=accounts[i].actype==='card'?0:(parseInt(document.getElementById('eac-init').value)||0);
   accounts[i].payday=accounts[i].actype==='card'?(parseInt(document.getElementById('eac-payday').value)||0):0;
   accounts[i].include=document.getElementById('eac-include').value==='1';
+  const a=accounts[i];
   save(); closeAcctModal(); render();
+  await dbWrite(() => sb.from('gb_accounts').update({
+    name: a.name, bank: a.bank || null, num: a.num || null,
+    actype: a.actype, init: a.init, payday: a.payday, include: a.include,
+  }).eq('id', a.id), '통장/카드 수정');
 }
 
 // ── MAIN RENDER ──
