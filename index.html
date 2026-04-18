@@ -406,6 +406,32 @@ tr:hover td{background:var(--sf2);}
   /* 고정지출 상단 4카드 → 1열 (M-1h 2a) */
   .fx-cards { grid-template-columns: 1fr !important; }
 
+  /* M-1i: 모바일 레이아웃 스윕 */
+  /* 🔴1 이체 페이지 좌/우 분할 → 세로 */
+  #page-transfer > div[style*="minmax(0,420px)"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* 🔴2 통장 mini-summary 4열 → 2열 */
+  #card-mini-summary {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* 🔴3 통장 페이지 상단 3카드 → 1열 */
+  .ac-cards {
+    grid-template-columns: 1fr !important;
+  }
+  /* 🔴4 자산 5카드 → 1열 (5개 홀수 stacking 어색 해소) */
+  .as-cards {
+    grid-template-columns: 1fr !important;
+  }
+  /* 🟡5 이체 목적 버튼 6개 → 2×3 */
+  #tr-purpose-btns {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* 🟡6 모달 폼 2열 → 1열 */
+  .mr {
+    grid-template-columns: 1fr !important;
+  }
+
   /* 고정지출 목록 테이블 → 카드 뷰 (M-1h 2b) */
   table:has(#fx-table) { display: block; padding: 10px; }
   table:has(#fx-table) thead { display: none; }
