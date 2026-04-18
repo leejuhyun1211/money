@@ -540,6 +540,19 @@ tr:hover td{background:var(--sf2);}
   #tr-body td:nth-child(5) { grid-column: 3; grid-row: 1 / 4; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; align-self: center; }
   #tr-body td:nth-child(6) { grid-column: 1 / 4; grid-row: 4; color: var(--mu); font-style: italic; font-size: 11px; }
   #tr-body td:nth-child(7) { grid-column: 1 / 4; grid-row: 5; justify-self: end; padding-top: 4px; }
+
+  /* M-1k: 연간현황 페이지 (M-1j 안전한 부분만 재적용) */
+  #page-yearly > div[style*="repeat(4,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  #yr-donut {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  .page [style*="min-width:900px"] {
+    min-width: 0 !important;
+    overflow-x: auto;
+  }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
