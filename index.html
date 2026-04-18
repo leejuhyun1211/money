@@ -374,8 +374,9 @@ tr:hover td{background:var(--sf2);}
   .cam { font-size: 9px; }
   .cm { font-size: 9px; }
 
-  /* 캘린더 부모 인라인 min-width:600px 무력화 (C2) */
-  [style*="min-width:600px"] {
+  /* 캘린더/연간표 부모 인라인 min-width:600/900 무력화 (C2 + M-1j 3d) */
+  [style*="min-width:600px"],
+  [style*="min-width:900px"] {
     min-width: 0 !important;
     overflow-x: auto;
   }
@@ -432,6 +433,21 @@ tr:hover td{background:var(--sf2);}
     grid-template-columns: 1fr !important;
   }
 
+  /* M-1j: 연간현황 페이지 (3a/3b/3c) */
+  /* 3a 4카드 → 1열 */
+  #page-yearly > div[style*="repeat(4,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* 3b 대표 카테고리 도넛+범례 세로 스택 */
+  #yr-donut {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  /* 3c 월별 상세 box-hd 오른쪽 안내 span 숨김 */
+  #yr-detail-box .box-hd > span:last-child {
+    display: none !important;
+  }
+
   /* 고정지출 목록 테이블 → 카드 뷰 (M-1h 2b) */
   table:has(#fx-table) { display: block; padding: 10px; }
   table:has(#fx-table) thead { display: none; }
@@ -472,7 +488,7 @@ tr:hover td{background:var(--sf2);}
     color: var(--mu);
   }
   #fx-table td:nth-child(2)::after,
-  #fx-table td:nth-child(3)::after { content: " · "; color: var(--mu); }
+  #fx-table td:nth-child(3)::after { content: " · "; color: var(--mu); margin: 0 4px; }
   #fx-table td:nth-child(6) { grid-area: status; }
   #fx-table td:nth-child(7) { display: none; }
   #fx-table td:nth-child(8) { grid-area: action; text-align: right; }
@@ -513,22 +529,36 @@ tr:hover td{background:var(--sf2);}
     letter-spacing: normal;
   }
 
-  /* tx-body (7열: date/content/cat/type/acct/amount/actions) */
-  #tx-body td:nth-child(1) { grid-column: 1; grid-row: 1; color: var(--mu); font-size: 11px; }
-  #tx-body td:nth-child(2) { grid-column: 2; grid-row: 1; font-weight: 600; font-size: 14px; color: var(--tx); }
-  #tx-body td:nth-child(3) { grid-column: 1 / 3; grid-row: 2; color: var(--mu); font-size: 11px; }
+  /* tx-body (7열: date/content/cat/type/acct/amount/actions) — M-1j 레이아웃
+     row 1: content · category (main) | account + actions (aux)
+     row 2: date (muted) | amount (bold, right) */
+  #tx-body tr {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "main aux" "date amount";
+  }
+  #tx-body td:nth-child(1) { grid-area: date; color: var(--mu); font-size: 11px; }
+  #tx-body td:nth-child(2) { grid-area: main; display: inline; font-weight: 600; font-size: 14px; color: var(--tx); }
+  #tx-body td:nth-child(2)::after { content: " · "; color: var(--mu); margin: 0 4px; }
+  #tx-body td:nth-child(3) { grid-area: main; display: inline; font-size: 13px; color: var(--mu); }
   #tx-body td:nth-child(4) { display: none; }
-  #tx-body td:nth-child(5) { display: none; }
-  #tx-body td:nth-child(6) { grid-column: 3; grid-row: 1 / 3; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; align-self: center; }
-  #tx-body td:nth-child(7) { grid-column: 1 / 4; grid-row: 3; justify-self: end; padding-top: 4px; }
+  #tx-body td:nth-child(5) { grid-area: aux; font-size: 12px; text-align: right; }
+  #tx-body td:nth-child(6) { grid-area: amount; font-size: 16px; font-weight: 700; color: var(--tx); text-align: right; }
+  #tx-body td:nth-child(7) { grid-area: aux; display: inline; text-align: right; padding-top: 0; justify-self: end; }
 
-  /* ac-tx-body (6열: date/content/cat/type/amount/actions) */
-  #ac-tx-body td:nth-child(1) { grid-column: 1; grid-row: 1; color: var(--mu); font-size: 11px; }
-  #ac-tx-body td:nth-child(2) { grid-column: 2; grid-row: 1; font-weight: 600; font-size: 14px; color: var(--tx); }
-  #ac-tx-body td:nth-child(3) { grid-column: 1 / 3; grid-row: 2; color: var(--mu); font-size: 11px; }
+  /* ac-tx-body (6열: date/content/cat/type/amount/actions) — 통장 없음
+     row 1: content · category (main) | actions (aux)
+     row 2: date | amount */
+  #ac-tx-body tr {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "main aux" "date amount";
+  }
+  #ac-tx-body td:nth-child(1) { grid-area: date; color: var(--mu); font-size: 11px; }
+  #ac-tx-body td:nth-child(2) { grid-area: main; display: inline; font-weight: 600; font-size: 14px; color: var(--tx); }
+  #ac-tx-body td:nth-child(2)::after { content: " · "; color: var(--mu); margin: 0 4px; }
+  #ac-tx-body td:nth-child(3) { grid-area: main; display: inline; font-size: 13px; color: var(--mu); }
   #ac-tx-body td:nth-child(4) { display: none; }
-  #ac-tx-body td:nth-child(5) { grid-column: 3; grid-row: 1 / 3; font-size: 15px; font-weight: 700; color: var(--tx); text-align: right; align-self: center; }
-  #ac-tx-body td:nth-child(6) { grid-column: 1 / 4; grid-row: 3; justify-self: end; padding-top: 4px; }
+  #ac-tx-body td:nth-child(5) { grid-area: amount; font-size: 16px; font-weight: 700; color: var(--tx); text-align: right; }
+  #ac-tx-body td:nth-child(6) { grid-area: aux; text-align: right; padding-top: 0; justify-self: end; }
 
   /* tr-body (7열: date/purpose/from/to/amount/memo/action) */
   #tr-body td:nth-child(1) { grid-column: 1; grid-row: 1; color: var(--mu); font-size: 11px; }
