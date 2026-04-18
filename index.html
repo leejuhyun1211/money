@@ -242,6 +242,9 @@ tr:hover td{background:var(--sf2);}
 .more-drawer { display: none; }
 .more-drawer-backdrop { display: none; }
 
+/* Mobile-only tx card cell (M-1l) — hidden on desktop */
+.tx-mc { display: none; }
+
 /* ==== Responsive (Step M-1a/M-1b): tablet ≤1023 / mobile ≤640 ==== */
 @media (max-width: 1023px) {
   /* 사이드바 숨김 (bottom tab bar로 대체, M-1b) */
@@ -552,6 +555,66 @@ tr:hover td{background:var(--sf2);}
   .page [style*="min-width:900px"] {
     min-width: 0 !important;
     overflow-x: auto;
+  }
+
+  /* M-1l: tx 카드 — 기존 grid 무력화 + 모바일 카드 td만 표시 */
+  #tx-body tr, #ac-tx-body tr {
+    display: block !important;
+    padding: 0 !important;
+    grid-template-columns: none !important;
+  }
+  #tx-body td:not(.tx-mc),
+  #ac-tx-body td:not(.tx-mc) {
+    display: none !important;
+  }
+  #tx-body td.tx-mc,
+  #ac-tx-body td.tx-mc {
+    display: block !important;
+    padding: 12px;
+    border: none;
+  }
+  .tmc-r1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .tmc-main {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tmc-cat { font-weight: normal; color: var(--mu); font-size: 13px; }
+  .tmc-aux {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: normal;
+    color: var(--mu);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tmc-aux button { font-size: 11px; padding: 2px 8px; }
+  .tmc-r2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 6px;
+  }
+  .tmc-date { font-size: 12px; color: var(--mu); }
+  .tmc-amount { font-size: 16px; font-weight: 700; }
+
+  /* M-1l: 고정지출 meta 영역 구분자 — border-left */
+  #fx-table td:nth-child(3),
+  #fx-table td:nth-child(5) {
+    border-left: 1px solid var(--bd) !important;
+    padding-left: 8px !important;
+    margin-left: 4px !important;
   }
 }
 </style>
@@ -3532,14 +3595,16 @@ function render(){
   document.getElementById('tx-empty').style.display=rows.length?'none':'block';
   document.getElementById('tx-body').innerHTML=pageRows.map(t=>{
     const acct=accounts.find(a=>String(a.id)===String(t.acctId));
+    const acctLabel=acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:'';
     return`<tr${t.isFixed?' style="opacity:.7"':''}>
       <td style="color:var(--mu);font-size:11px">${t.date}</td>
       <td>${t.desc}${t.isFixed?` <span class="bdg auto">고정(예정)</span>`:''}${t.autoFromFx?` <span class="bdg auto" style="background:rgba(74,222,128,.15);color:var(--ic)">고정(완료)</span>`:''}${(t.tags||[]).map(tg=>`<span style="background:rgba(168,85,247,.12);color:#c084fc;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">#${tg}</span>`).join('')}</td>
       <td><span style="background:${catColor(t.cat)}22;color:${catColor(t.cat)};padding:2px 7px;border-radius:4px;font-size:11px">${catIcon(t.cat)} ${t.cat}</span></td>
       <td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td>
-      <td style="font-size:11px;color:var(--mu)">${acct?`${acct.actype==='card'?'💳':'🏦'}${acct.name}`:''}</td>
+      <td style="font-size:11px;color:var(--mu)">${acctLabel}</td>
       <td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td>
       <td style="white-space:nowrap">${!t.isFixed?`<button class="tbtn" onclick="openTxModal(${t.id})">수정</button><button class="tbtn" onclick="dupTx(${t.id})">복제</button><button class="tbtn tbtn-del" onclick="delTx(${t.id})">삭제</button>`:''}</td>
+      <td class="tx-mc"><div class="tmc-r1"><span class="tmc-main">${t.desc} <span class="tmc-cat">· ${t.cat||''}</span></span><span class="tmc-aux">${acctLabel}${!t.isFixed?` <button class="tbtn" onclick="openTxModal(${t.id})">수정</button>`:''}</span></div><div class="tmc-r2"><span class="tmc-date">${t.date}</span><span class="tmc-amount ${t.type==='income'?'ai':'ae'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span></div></td>
     </tr>`;
   }).join('');
 
@@ -3920,7 +3985,7 @@ function render(){
   const acTxEmpty=document.getElementById('ac-tx-empty');
   if(acTxBody){
     acTxEmpty.style.display=acTxsAll.length?'none':'block';
-    acTxBody.innerHTML=acTxsAll.map(t=>{const a=accounts.find(x=>String(x.id)===String(t.acctId));return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${a?`${a.actype==='card'?'💳':'🏦'} ${a.name} · `:''}${t.desc}</td><td><span style="background:${catColor(t.cat)}22;color:${catColor(t.cat)};padding:2px 7px;border-radius:4px;font-size:11px">${catIcon(t.cat)||''} ${t.cat}</span></td><td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td><td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="tbtn" onclick="openTxModal(${t.id})">수정</button></td></tr>`;}).join('');
+    acTxBody.innerHTML=acTxsAll.map(t=>{const a=accounts.find(x=>String(x.id)===String(t.acctId));return`<tr><td style="color:var(--mu);font-size:11px">${t.date}</td><td>${a?`${a.actype==='card'?'💳':'🏦'} ${a.name} · `:''}${t.desc}</td><td><span style="background:${catColor(t.cat)}22;color:${catColor(t.cat)};padding:2px 7px;border-radius:4px;font-size:11px">${catIcon(t.cat)||''} ${t.cat}</span></td><td><span class="bdg ${t.type}">${t.type==='income'?'수입':'지출'}</span></td><td style="text-align:right"><span class="${t.type==='income'?'ai':'ae'}">${fmt(t.amount)}</span></td><td style="white-space:nowrap"><button class="tbtn" onclick="openTxModal(${t.id})">수정</button></td><td class="tx-mc"><div class="tmc-r1"><span class="tmc-main">${t.desc} <span class="tmc-cat">· ${t.cat||''}</span></span><span class="tmc-aux"><button class="tbtn" onclick="openTxModal(${t.id})">수정</button></span></div><div class="tmc-r2"><span class="tmc-date">${t.date}</span><span class="tmc-amount ${t.type==='income'?'ai':'ae'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span></div></td></tr>`;}).join('');
   }
 
   // 신용카드 탭
